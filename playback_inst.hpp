@@ -14,5 +14,16 @@ struct playback_inst
 	virtual int take(const std::string &title, pixel &output) = 0;
 	virtual int take(const std::string &title, pcm_require &output) = 0;
         virtual duration_div duration() = 0;
+    virtual void resolution(int w, int h)
+    {
+        /*if want change resolution */
+        if(w > 0 &&
+                h > 0)
+        {
+            _attr.reset(avattr_key::width, avattr_key::width, w, (double)w);
+            _attr.reset(avattr_key::height, avattr_key::height, h, (double)w);
+        }
+    }
+
 	virtual enum AVMediaType get_master_clock(){return AVMEDIA_TYPE_UNKNOWN;}
 };

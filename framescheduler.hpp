@@ -52,6 +52,7 @@ protected:
 	virtual void usedframe(_Tframe_pcm &rf, int size_from_array = 0) { }
 	virtual void usingframe(_Tframe_pixel &rf) { }
 	virtual void usingframe(_Tframe_pcm &rf) { }
+
 public:
 	framebuffering_type(const avattr &attr) :
 		_attr(attr),
@@ -216,7 +217,13 @@ public:
 template <typename _type_pixelframe, typename _type_pcmframe> class avframescheduler :
 		public framebuffering_type<_type_pixelframe, _type_pcmframe>
 {
-private:
+protected:
+    virtual  int64_t global_clock()
+    {
+        return av_gettime();
+    }
+
+
 	enum AVMediaType _masterclock;
 	enum _video_type
 	{
@@ -239,9 +246,10 @@ private:
 	{
 		if(_masterclock == AVMEDIA_TYPE_VIDEO)
 		{
-			double delta;
-			delta = (av_gettime() - _video[_video_type::global_timer]) / 1000000.0;
-			return _video[_video_type::current_presentation_time] + delta;
+            double delta;
+            delta = (global_clock() - _video[_video_type::global_timer]) / 1000000.0;
+            return _video[_video_type::current_presentation_time] + delta;
+            //return _video[_video_type::current_presentation_time];
 		}
 		else if(_masterclock == AVMEDIA_TYPE_AUDIO)
 		{
@@ -264,7 +272,7 @@ private:
 		 */
 
 		_video[_video_type::current_presentation_time] = rf.getpts();
-		_video[_video_type::global_timer] = (double)av_gettime();
+        _video[_video_type::global_timer] = (double)global_clock();
 		delay = _video[_video_type::current_presentation_time] - _video[_video_type::last_presentation_time];
 
 
@@ -282,8 +290,8 @@ private:
 		/*
 		 	 	 master clock syncronize
 		 */
-		masters_clock = master_clock_pts();
-		diff_pts = _video[_video_type::current_presentation_time] - masters_clock;
+        masters_clock = master_clock_pts();
+        diff_pts = _video[_video_type::current_presentation_time] - masters_clock;
 
 		/*
 		 	 	threshold
@@ -302,11 +310,13 @@ private:
 		/*
 				start sync
 		 */
-		_video[_video_type::clock_base_frame_pts_timer] += delay;
+        _video[_video_type::clock_base_frame_pts_timer] += delay;
 
-		double currenttimer = (double)av_gettime() / 1000000.0;
-		act_delay = _video[_video_type::clock_base_frame_pts_timer] - currenttimer;
+        double currenttimer = (double)global_clock() / 1000000.0;
+        act_delay = _video[_video_type::clock_base_frame_pts_timer] - currenttimer;
+    //    act_delay = delay;
 
+        //printf("delay = %f diffpts = %f clockbase = %f, current timer = %f act delay = %f\n", delay, diff_pts, _video[_video_type::clock_base_frame_pts_timer], currenttimer, act_delay);
 		if(act_delay < 0.010)
 		{
 			/*minimum delay 10ms*/
@@ -345,8 +355,8 @@ public:
 		 	 	 initialize value video
 		 */
 		_video[last_delay_time] = 40e-3;
-		_video[clock_base_frame_pts_timer] = (double) (av_gettime() / 1000000.0);;
-		_video[global_timer] = (double) av_gettime();
+        _video[clock_base_frame_pts_timer] = (double) (global_clock() / 1000000.0);;
+        _video[global_timer] = (double) global_clock();
 
 		/*
 		 	 initialize value audio

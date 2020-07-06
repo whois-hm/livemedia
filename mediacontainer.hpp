@@ -27,6 +27,7 @@ public:
 		if(_context)
 		{
 			avformat_close_input(&_context);
+
 		}
 	}
 
@@ -210,6 +211,7 @@ public:
                     return t;
 
                 }
+
             return std::make_tuple(0,0,0,0,0);/*N/A*/
 	}
         double frame_start_time(bool &has)

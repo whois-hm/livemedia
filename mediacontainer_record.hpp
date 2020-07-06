@@ -1,6 +1,7 @@
 #pragma once
 class mediacontainer_record
 {
+
 	struct encoder_video_functor
 	{
 		void operator()(avframe_class &frm, avpacket_class &pkt,void * c)
@@ -326,7 +327,7 @@ public:
 	}
 	void recording(pcmframe &f)
 	{
-		if(_enc[AVMEDIA_TYPE_AUDIO])
+		if(_enc[f.type()])
 		{
 			_pcm_frm.push_back(f);
 			compared_flush();

@@ -66,9 +66,10 @@ extern "C"
 #include <iostream>
 #include <functional>
 #include "utils.hpp"
+#include "filter.hpp"
+#include "dlog.hpp"
 #include "livemedia++.hpp"
 #include "wthread.hpp"
-#include "filter.hpp"
 #include "busyscheduler.hpp"
 #include "avattr.hpp"
 #include "media_data.hpp"

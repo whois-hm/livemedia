@@ -92,6 +92,8 @@ public:
 	void play(){_inst->play();}
 	enum AVMediaType get_master_clock(){return _inst->get_master_clock();}
     duration_div duration(){return _inst->duration();}
+    void resolution(int w, int h)
+    { _inst->resolution(w, h); }
 
 	/*
 	 	 	 if 0 > 1 take frame
@@ -103,7 +105,11 @@ public:
 			const std::string &title = ""/*for rtsp stream*/
 			)
 	{
-		return _inst->take(title, d);
+        if(_inst)
+        {
+            return _inst->take(title, d);
+        }
+        return -1;
 	}
 };
 

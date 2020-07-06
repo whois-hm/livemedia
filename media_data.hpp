@@ -156,7 +156,7 @@ public :
 	{
 		return _data_size;
 	}
-	virtual bool can_take()
+    virtual bool can_take() const
 	{
 
 		return read() != nullptr &&

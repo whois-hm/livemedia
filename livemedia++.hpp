@@ -19,8 +19,8 @@ public:
 		{
 			char const *str = nullptr;
 			threadid throw_at = BackGround_id();
-			livemedia_pp::ref()->namedthread_get(throw_at,str);			
-			printf("throw except thread at [%s]\n", str ? str : "unknown");
+			livemedia_pp::ref()->namedthread_get(throw_at,str);
+			livemedia_pp::ref()->_dlog(dlog::critical, "throw except thread at [%s]\n", str ? str : "unknown");
 		}
 	private: void trace_address(const char *str, unsigned backtrace_dep)
 		{
@@ -33,16 +33,16 @@ public:
 	
 			if(size > 0)
 			{
-				printf("terminate called (%s) : look up addr \n", str);
+				livemedia_pp::ref()->_dlog(dlog::critical, "terminate called (%s) : look up addr \n", str);
 	
 				for(int i = 0; i < size; i++)
 				{
-					printf("addr2line -f -C -e avfor %08x\n", (unsigned)backtrace_addr[i]);
+					livemedia_pp::ref()->_dlog(dlog::critical, "addr2line -f -C -e lmp %08x\n", (unsigned)backtrace_addr[i]);
 				}
 			}
 			else
 			{
-				printf("terminate called (%s): look up unknown	addr\n", str);
+				livemedia_pp::ref()->_dlog(dlog::critical, "terminate called (%s): look up unknown	addr\n", str);
 			}
 		}
 	private: void start_exit()
@@ -56,9 +56,9 @@ public:
 		{
 			if(likely)
 			{
-				printf("==================================\n");
-				printf("         EXCEPTION CALL \n");
-				printf("==================================\n");
+				livemedia_pp::ref()->_dlog(dlog::critical, "==================================\n");
+				livemedia_pp::ref()->_dlog(dlog::critical, "         EXCEPTION CALL \n");
+				livemedia_pp::ref()->_dlog(dlog::critical, "==================================\n");
 				trace_thread();
 				trace_address(str, backtrace_dep);
 
@@ -87,7 +87,7 @@ public:
 			(!livemedia_pp::ref()->namedthread_register(this), 
 			"can't register named thread");
 		}
-		namedthread()
+        ~namedthread()
 		{
 			livemedia_pp::ref()->namedthread_unregister(this);
 		}
@@ -186,7 +186,7 @@ private:
 							NULL,
 							NULL,
 							NULL);
-	
+
 	
 					_ptr = (void *)_sws;
 	
@@ -274,7 +274,11 @@ public:
 		avcodec_register_all();
 		av_register_all();
 		av_lockmgr_register(ffmpeg_lockmgr) ;
-	//	throw_register_sys_except();
+		throw_register_sys_except();
+		_dlog.console_writer_install();
+		_dlog.outbuffer_increase(1024);
+		_dlog.level_install(dlog::normal);
+		_dlog.prefix_install("[livemedia_pp]");
 	}
 	virtual ~livemedia_pp()
 	{
@@ -355,11 +359,10 @@ public:
 	
 	bool namedthread_register( namedthread *t )
 	{
-	
 		if(t && 
 			(*t)())		
 		{
-			autolock a(_namedthreads_mutex);
+            autolock a(_namedthreads_mutex);
 			for(auto it : _namedthreads)
 			{
 				if((*it) == (*t))
@@ -370,7 +373,6 @@ public:
 					return false;
 				}
 			}
-				printf("registed named thread : %s\n", t->_name);
 			_namedthreads.push_back(t);
 			return true;
 		}
@@ -384,7 +386,9 @@ public:
 		{
 			autolock a(_namedthreads_mutex);
 			_namedthreads.remove_if([&](namedthread *a)->bool{
-					(*a) == (*t);
+                bool res = (*a) == (*t);
+
+                    return (*a) == (*t);
 				});
 		}		
 	}
@@ -414,14 +418,17 @@ public:
 		}
 		return false;
 	}
+	const dlog &log()
+	{
+		return _dlog;
+	}
 
 private:
-
-
 	std::mutex _filtercontext_container_mutex;
 	std::mutex _namedthreads_mutex;
 	std::vector<filtercontext_container>_filercontext_container;
 	std::list<namedthread *>_namedthreads;
+	dlog _dlog;
 };
 
 typedef livemedia_pp::namedthread livemedia_namedthread;

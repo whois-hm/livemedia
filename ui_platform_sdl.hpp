@@ -235,9 +235,13 @@ private:
 						(Uint8)std::get<1>(_color),
 						(Uint8)std::get<2>(_color)
 					};
-					_surface = TTF_RenderText_Solid(_target_font,
-						_label, 
-						color);
+					if(_target_font)
+					{
+						_surface = TTF_RenderText_Solid(_target_font,
+							_label,
+							color);
+					}
+
 					_texture = SDL_CreateTextureFromSurface(_target_renderer, _surface);
 					SDL_QueryTexture(_texture, nullptr, nullptr, &w, &h);
 					SDL_Rect sr = {
@@ -395,7 +399,11 @@ public :
 					SDL_INIT_AUDIO);
 			TTF_Init();
 			_font = TTF_OpenFont(sdl_ttf_fontpath, 15);
-			TTF_SetFontKerning(_font, 1);
+			if(_font)
+			{
+				TTF_SetFontKerning(_font, 1);
+			}
+
 			_reg_eventid = SDL_RegisterEvents(1);
 		}
 	virtual ~ui_platform_sdl()
@@ -406,7 +414,11 @@ public :
 				delete it;
 			}		
 			_windows.clear();
-			TTF_CloseFont(_font);
+			if(_font)
+			{
+				TTF_CloseFont(_font);
+			}
+
 			TTF_Quit();
 			SDL_Quit();			
 		}

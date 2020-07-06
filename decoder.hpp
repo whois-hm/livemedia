@@ -201,6 +201,7 @@ private:
 			{
 				if(avcodec_parameters_to_context(_avcontext, temppar) < 0)
 				{
+					printf("=====================111555555555\n");
 					break;
 				}
 

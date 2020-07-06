@@ -67,7 +67,7 @@ public:
 	{ return std::get<2>(_val); }
 	enum AVSampleFormat format() const
 	{ return std::get<3>(_val); }
-	virtual bool can_take()
+    virtual bool can_take() const
 	{
 		/*
 		 	 responsor filled field

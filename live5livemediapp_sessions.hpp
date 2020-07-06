@@ -361,12 +361,8 @@ private:
 			}
 			virtual ~mp4mediacontainersource()
 			{
-			printf("deleted 11\n");
 				if(_mp4_h264_adts_bsf) delete _mp4_h264_adts_bsf;
-				printf("deleted22\n");
 				if(_container) delete _container;
-				printf("deleted33\n");
-	
 			}
 			virtual int doGetNextFrame(enum AVMediaType type,
 					unsigned char*to,
@@ -948,7 +944,12 @@ public:
 			}
 		}
 	}
-	bool create_subsessions()
+    bool create_subsessions(bool reuse)			/*
+                selete reuse
+                if reuse == false
+                clientid not important value. live555 create source just 1.
+                therefor we operation just 1 clientsession id
+            */
 	{
 		/*tell subsession*/
 		if(contain_string(_srcs, "/dev"))
@@ -962,27 +963,22 @@ public:
 		if(contain_string(_srcs, ".mp4"))
 		{
 			mp4mediacontainersource dump(_srcs, 0);
-			/*
-				selete reuse 
-				if reuse == false
-				clientid not important value. live555 create source just 1.
-				therefor we operation just 1 clientsession id 
-			*/
+
 			Boolean breuse = false;
 			if(dump.videocodec() == AV_CODEC_ID_H264)
 			{
-				this->addSubsession(new livemediapp_h264_servermediasubsession(*this, breuse));
+                this->addSubsession(new livemediapp_h264_servermediasubsession(*this, reuse));
 			}
 			if(dump.audiocodec() == AV_CODEC_ID_AAC)
 			{
 				this->addSubsession(new livemediapp_adts_audio_servermediasubsession(*dump._container,/*get parameter audio spec*/
 					*this,
-					breuse));
+                    reuse));
 			}
 		}
 		return numSubsessions() > 0;
 	}
-	std::list<source *>_sources;;
+    std::list<source *>_sources;
 	char *_srcs;
 
 
@@ -993,6 +989,7 @@ public:
 		       char const* streamName,
 		       char const* info,
 		       char const* description,
+                bool source_reuse,
 		       Boolean isSSM,
 		       char const* miscSDPLines)
 	{
@@ -1004,7 +1001,7 @@ public:
 			isSSM, 
 			miscSDPLines);
 		
-		DECLARE_THROW(!newsession->create_subsessions(), "no found stream");
+        DECLARE_THROW(!newsession->create_subsessions(source_reuse), "no found stream");
 		return newsession;
 	}
 	livemediapp_serversession(char const *srcs, 

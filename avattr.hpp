@@ -187,6 +187,10 @@ public:
 
 		return !has;
 	}
+    void clear()
+    {
+        _map.clear();
+    }
 
 	bool has_frame_video() const
 	{
@@ -205,8 +209,9 @@ public:
 	{
 		_map.clear();
 	}
+
 	virtual ~avattr(){}
-private:
+protected:
 	std::map<
 	std::string,
 	avattr_types

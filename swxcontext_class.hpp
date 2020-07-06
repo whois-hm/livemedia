@@ -139,8 +139,10 @@ private:
 
 		//TODO metadata copy ?
 
-		frm =  *_new.raw();
 
+
+
+		frm =  *_new.raw();
 
 	}
 	void lock ( pixelframe &frm,

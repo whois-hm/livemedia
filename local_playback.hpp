@@ -89,10 +89,14 @@ class local_playback :
 	{
 			AVRational _videorational;
 			AVRational _audiorational;
+            int64_t _delta;
+            int64_t _startdelta;
 			framescheduler(const avattr &attr) :
 				avframescheduler(attr),
 				_videorational(AVRational{0, 0}),
-				_audiorational(AVRational{0, 0}) { }
+                _audiorational(AVRational{0, 0}),
+            _delta(0),
+            _startdelta(0){ }
 			virtual ~framescheduler(){}
 		void set_rational(enum AVMediaType type, const AVRational &rational)
 		{
@@ -101,6 +105,31 @@ class local_playback :
 			else if(type == AVMEDIA_TYPE_AUDIO)
 				set_audio_rational(rational);
 		}
+        virtual int64_t global_clock()
+        {
+            return avframescheduler
+                        <pixelframe_pts, pcmframe_pts>::global_clock() ;
+        }
+        void start_delta()
+        {
+            _startdelta = global_clock();
+        }
+        void end_delta()
+        {
+            if(_startdelta)
+            {
+                _delta = global_clock() - _startdelta;
+
+                _video[_video_type::clock_base_frame_pts_timer] += (double)(_delta / 1000000.0);
+
+            }
+
+        }
+        void clear_delta()
+        {
+            _startdelta = _delta = 0;
+        }
+
 		void set_video_rational(const AVRational &rational)
 		{ _videorational = rational; }
 		void set_audio_rational(const AVRational &rational)
@@ -288,7 +317,7 @@ class local_playback :
 		}
 		void wait_dump()
 		{
-			stream::fucntor_par par;
+            stream::fucntor_par par;
 			par.e = stream::functor_event_waitdump;
 			sendto_wait(&par, sizeof(stream::fucntor_par));
 		}
@@ -395,12 +424,14 @@ public:
 		if(_state == local_playback_state_run || 
 			_state == local_playback_state_open)
 		{
+
 			_state =  local_playback_state_pause;
+               _framescheduler.start_delta();
 			for(auto &it : _streamers)
 			{
 				it.second.first->lock();
 			}
-		
+
 		}		
 	}
 	void resume(bool closing = false)
@@ -409,13 +440,38 @@ public:
 		{
 			if(!closing)_state = local_playback_state_run;
 			else _state = local_playback_state_close;
+            _framescheduler.end_delta();
 			for(auto &it : _streamers)
 			{
 				it.second.first->unlock();
 			}
+
 		}
 		
 	}
+    void resolution(int w, int h)
+    {
+        if(w > 0 &&
+                h > 0)
+        {
+            /*
+                 syncronize 'swscontext' to 'frame'.
+                so.. user don't request when our resolution value changed
+            */
+            pause();
+
+            for(auto &it : _streamers)
+            {
+                it.second.first->wait_dump();
+            }
+
+            /*if want change resolution */
+            _attr.reset(avattr_key::width, avattr_key::width, w, (double)w);
+            _attr.reset(avattr_key::height, avattr_key::height, h, (double)w);
+            resume();
+        }
+
+    }
 	void seek(double incr)
 	{
 		double master_pts;
@@ -455,7 +511,7 @@ public:
 		{
 			resume();
 		}
-
+        _framescheduler.clear_delta();
 	}
 
 	bool has(avattr::avattr_type_string &&key)

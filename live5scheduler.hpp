@@ -22,7 +22,7 @@ private:
 	/*
 	 	 if you can want loop at other thread
 	 */
-	std::thread *_th;
+    std::thread *_th;
 	char _loop;
 	TaskScheduler *_scheduler;
 	UsageEnvironment *_env;
@@ -139,6 +139,7 @@ public:
 			_th->join();
 			delete _th;
 			_th = nullptr;
+
 			SEMA_close(&_wait_sema);
 			return;
 		}

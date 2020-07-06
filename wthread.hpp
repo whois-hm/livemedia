@@ -20,13 +20,13 @@ struct _wthread_functor
 
 	template <typename ...Args>
 	void operator () (
-			char const *name,
+			std::string name,
 			workqueue *_wq,
 			function_workqueue_recv recv,
 			_dword time,
 			Args...args)
 	{
-		DECLARE_LIVEMEDIA_NAMEDTHREAD(name);
+		DECLARE_LIVEMEDIA_NAMEDTHREAD(name.c_str());
 
 		/*
 		 	 	 we create object to stack memory
@@ -77,7 +77,7 @@ class wthread
 private:
 	std::thread *_th;
 	workqueue *_wq;
-	char const *_wt_name;
+	std::string _wt_name;
 
 	/*
 	 	 	 get workqueue operation functions

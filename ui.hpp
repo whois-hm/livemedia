@@ -18,6 +18,7 @@ typedef std::tuple<int, int, int, int> ui_rect;	/*geometry value*/
 enum platform_event {
 	platform_event_error = 0, 	/*system has error, we recommend go to shutdown */
 	platform_event_touch,		/*screen touch has signaled*/
+	platform_event_keyboard,	/*keyboard input signaled*/
 	platform_event_user = 125	/*user custom event*/
 };
 /*platform_event_touch's parameter*/
@@ -30,6 +31,11 @@ struct pe_touch
 		
 	*/
 	int x, y, press;
+};
+/*platform_event_keyboard's parameter*/
+struct pe_keboard
+{
+
 };
 /*platform_event_error's parameter*/
 struct pe_error
@@ -46,7 +52,6 @@ struct pe_user
 	/*
 		user custom parameter
 	*/
-
 	unsigned _code;
 	void *_ptr;
 	

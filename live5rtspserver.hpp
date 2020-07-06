@@ -146,7 +146,8 @@ public:
 			Port ourPort = 554,	/*our server port*/
 			char const *usrid = nullptr,/*server's authentication*/
 			char const *usrpwd = nullptr,/*server's authentication*/
-		    unsigned reclamationSeconds = 0/*infinite service to client*/) :
+            unsigned reclamationSeconds = 0/*infinite service to client*/,
+            bool source_reuse = false/*reuse source*/) :
 		    RTSPServer(env,
 		    GenericMediaServer::setUpOurSocket(env, ourPort),
 			 ourPort,
@@ -155,6 +156,7 @@ public:
 			 _session_name(session_name ? session_name : url),
 			 _url(url),
 			 _mode(none),
+             _reuse_source(source_reuse),
 			 _report(report)
 	{
 		DECLARE_THROW(!_url, "can't parse url");
@@ -394,6 +396,7 @@ private:
 					_session_name,
 					"event session",
 					"streamd by livemedia++",
+                    _reuse_source,
 					false,
 					nullptr);
 			DECLARE_THROW(!livemediappsession, "can't create livemedia pp serversession..");
@@ -478,5 +481,7 @@ private:
 	char const *_session_name;
 	char const *_url;
 	enum operation_mode _mode;
+    bool _reuse_source;
 	struct report _report;
+
 };

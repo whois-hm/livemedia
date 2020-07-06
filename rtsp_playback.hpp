@@ -197,6 +197,7 @@ class rtsp_playback :
 						_attrs->second);
 
 				autolock a(*_framelock);
+
 				*_framebuffer << (_pcmframe);
 			}
 
@@ -308,8 +309,13 @@ class rtsp_playback :
 			}
 
 
-//			unsigned mspts = (pkt._presentationtime.tv_sec * 1000) + (pkt._presentationtime.tv_usec / 1000);
-//			printf("%s durationmicroseconds : %d, presentation time : %d normal playtime : %f\n", _mediatype == AVMEDIA_TYPE_VIDEO ? "video" : "audio", pkt._durationinmicroseconds, pkt._presentationtime.tv_usec, pkt._normalplaytime);
+			unsigned mspts = (pkt._presentationtime.tv_sec * 1000) + (pkt._presentationtime.tv_usec / 1000);
+			printf("%s durationmicroseconds : %d, presentation time : %d/%d normal playtime : %f\n",
+					_mediatype == AVMEDIA_TYPE_VIDEO ? "video" : "audio",
+							pkt._durationinmicroseconds,
+							pkt._presentationtime.tv_sec,
+							pkt._presentationtime.tv_usec,
+							pkt._normalplaytime);
 
 
 			stream::fucntor_par par;
@@ -364,7 +370,6 @@ class rtsp_playback :
 		}
 		void shutdown()
 		{
-			printf("shutdown....\n");
 			autolock a(_accesslock);
 			if(exec())
 			{
@@ -406,7 +411,6 @@ class rtsp_playback :
 			 */
 			if(has_shutdowned())
 			{
-				printf("get frame shutdown\n");
 				return -1;
 			}
 
@@ -467,6 +471,10 @@ private:
 		{
 			if(str_codec == "MPA")
 			{
+				subsession_attr.set(avattr_key::frame_audio, "audio subsession", 0,0);
+				subsession_attr.set(avattr_key::channel, "audio subsession channel", (int)subsession.numChannels(),0.0);
+				subsession_attr.set(avattr_key::samplerate, "audio subsession samplerate", (int)subsession.rtpTimestampFrequency(),0.0);
+				subsession_attr.set(avattr_key::pcm_format, "audio subsession format", AV_SAMPLE_FMT_S16,0.0);
 				return std::pair<enum AVMediaType, enum AVCodecID>(AVMEDIA_TYPE_AUDIO, AV_CODEC_ID_MP3);
 			}
 			if(str_codec == "MPEG4-GENERIC")
@@ -589,7 +597,7 @@ private:
 	void reported_from_client_read_subsession(live5rtspclient::mediasubsession const &subsession, unsigned char *data,  unsigned frameSize, unsigned numTruncatedBytes,
 			  struct timeval presentationTime, unsigned durationInMicroseconds)
 	{
-
+		//printf(" --> %d %d %d %d\n", numTruncatedBytes, presentationTime.tv_sec, presentationTime.tv_usec, durationInMicroseconds);
 		find_and(subsession, [&](streamer *s)->void {
 			s->put_packet(rtsppacket(data,
 					frameSize,
@@ -818,6 +826,19 @@ public:
 			}
 		}
 		return bfound;
+	}
+	virtual enum AVMediaType get_master_clock()
+	{
+		if(has(avattr_key::frame_audio))
+		{
+			return AVMEDIA_TYPE_AUDIO;
+		}
+
+		if(has(avattr_key::frame_video))
+		{
+			return AVMEDIA_TYPE_VIDEO;
+		}
+		return AVMEDIA_TYPE_UNKNOWN;
 	}
 	virtual void play()
 	{
