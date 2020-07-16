@@ -237,11 +237,6 @@ protected:
 			{
 				return nullptr;
 			}
-			if ( subsession.isbypassfiltered())
-			{
-
-				return new sink_bypass(env, subsession);
-			}
 			if(subsession.mediumName()[0] == 'v' ||
 					subsession.mediumName()[0] == 'V' )
 			{
@@ -269,23 +264,6 @@ protected:
 			}
 			return nullptr;
 		}
-	};
-	class sink_bypass : public mediasink
-	{
-		PresentationTimeSessionNormalizer *_normalizer;
-		friend class live5rtspclient;
-		sink_bypass (UsageEnvironment &env,
-				 mediasubsession &subsession) :
-					mediasink(env, subsession, LIVE5_BUFFER_SIZE),
-					_normalizer(new PresentationTimeSessionNormalizer(env))
-		{
-			subsession.addFilter(_normalizer->createNewPresentationTimeSubsessionNormalizer(subsession.readSource(),
-					subsession.rtpSource(),
-					subsession.codecName()));
-			subsession.addFilter(H264VideoStreamDiscreteFramer
-							 ::createNew(env, subsession.readSource()));
-		}
-		virtual ~sink_bypass(){}
 	};
 
 	class sink_mpeg4_aac_hbr  : public mediasink
