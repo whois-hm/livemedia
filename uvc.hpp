@@ -121,7 +121,7 @@ private:
 				{
 					goto fail;
 				}
-				for(int i = 0; i < req.count; i++)
+				for(unsigned i = 0; i < req.count; i++)
 				{
 					memset(&buf, 0, sizeof(struct v4l2_buffer));
 					buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -380,7 +380,7 @@ public:
 				return -1;
 			}
 
-			if(buf.index > _video_buffer_count)
+			if(buf.index > (unsigned)_video_buffer_count)
 			{
 				return -1;
 			}

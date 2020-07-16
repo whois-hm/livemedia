@@ -10,16 +10,23 @@ private:
 	{
 		if(_avcontext)avcodec_free_context(&_avcontext);
 		_avcontext = nullptr;
-		decode = nullptr;
+		_decode = nullptr;
 	}
 public:
+	std::string name()
+	{
+		return av_type_string_map()(_avcontext->codec_id);
+	}
+	enum AVCodecID id()
+	{
+		return _avcontext->codec_id;
+	}
+
 	template <typename functor>
-	int decoding( avpacket_class &packet,
+	int operator () ( avpacket_class &packet,
 			functor &&_f,
 			void *puser = nullptr)
 	{
-
-
 		int org_size = packet.raw()->size;
 		unsigned char *org_ptr = packet.raw()->data;
 		int ret = 0;
@@ -31,7 +38,7 @@ public:
 		{
 			ret = 0;
 			got = 0;
-			ret = decode(_avcontext, _frame.raw(), &got, packet.raw());
+			ret = _decode(_avcontext, _frame.raw(), &got, packet.raw());
 			if(ret >= 0 &&
 					got)
 			{
@@ -69,17 +76,26 @@ public:
 	}
 	bool opentest(const avattr &attr,
 			char const *codec)
+	/*
+	 	 test from codec string
+	 */
 	{
 		clear();
 		return decoder_open_test(attr, codec, nullptr, nullptr);
 	}
 	bool opentest(const avattr &attr,
 			enum AVCodecID codec)
+	/*
+	 	 test from codec id
+	 */
 	{
 		clear();
 		return decoder_open_test(attr, nullptr, &codec, nullptr);
 	}
 	bool opentest(const AVCodecParameters *codec)
+	/*
+	 	 test from any codec parameter
+	 */
 	{
 		clear();
 		return decoder_open_test(avattr(), nullptr, nullptr, codec);
@@ -87,15 +103,19 @@ public:
 	/*
 	 	 create decoder by users parameter
 	 */
-	decoder()  : _avcontext(nullptr),
+	decoder()  :
+			_decode(nullptr),
+			_avcontext(nullptr),
 			_frame(avframe_class())
 	{
 		/*
-		 	 useful opentest
+		 	 useful opentest or copy
 		 */
 	}
 	decoder(const avattr &attr,
-			char const *codec) : _avcontext(nullptr),
+			char const *codec) :
+					_decode(nullptr),
+					_avcontext(nullptr),
 					_frame(avframe_class())
 	{
 		DECLARE_THROW(!decoder_open_test(attr,
@@ -108,7 +128,9 @@ public:
 	 	 create decoder by users parameter
 	 */
 	decoder(const avattr &attr,
-			enum AVCodecID codec) : _avcontext(nullptr),
+			enum AVCodecID codec) :
+					_decode(nullptr),
+					_avcontext(nullptr),
 					_frame(avframe_class())
 	{
 		DECLARE_THROW(!decoder_open_test(attr,
@@ -120,7 +142,8 @@ public:
 	/*
 	 	 create decoder by codecs parameter
 	 */
-	decoder( const AVCodecParameters *codec) : _avcontext(nullptr),
+	decoder( const AVCodecParameters *codec) :_decode(nullptr),
+			_avcontext(nullptr),
 			_frame(avframe_class())
 	{
 		DECLARE_THROW(!decoder_open_test(avattr(),
@@ -129,9 +152,66 @@ public:
 				codec),
 				"can't alloc decoder");
 	}
+	decoder(const decoder &rhs) :
+		_decode(nullptr),
+		_avcontext(nullptr),
+		_frame(avframe_class())
+
+	{
+		avattr dump_attr;
+		AVCodecParameters *codec_par = avcodec_parameters_alloc();
+		DECLARE_THROW(!codec_par, "decoder create fail");
+
+		DECLARE_THROW(0 < avcodec_parameters_from_context(codec_par, rhs._avcontext), "decoder create fail");
+
+		DECLARE_THROW(!decoder_open_test(dump_attr/*when test by codec parameter, this attr parmeter is none used*/,
+				nullptr,
+				nullptr,
+				codec_par),
+				"can't alloc decoder");
+		avcodec_parameters_free(&codec_par);
+	}
+	decoder(decoder &&rhs) :
+		_decode(nullptr),
+		_avcontext(nullptr),
+		_frame(avframe_class())
+	{
+		clear();
+		this->_avcontext = rhs._avcontext;
+		this->_decode = rhs._decode;
+		this->_frame = rhs._frame;
+		rhs._avcontext = nullptr;
+	}
+
 	virtual ~decoder()
 	{
 		clear();
+	}
+	decoder &operator()(decoder &&rhs)
+	{
+		clear();
+		this->_avcontext = rhs._avcontext;
+		this->_decode = rhs._decode;
+		this->_frame = rhs._frame;
+		rhs._avcontext = nullptr;
+		return *this;
+	}
+	decoder &operator()(const decoder &rhs)
+	{
+		clear();
+		avattr dump_attr;
+		AVCodecParameters *codec_par = avcodec_parameters_alloc();
+		DECLARE_THROW(!codec_par, "decoder create fail");
+
+		DECLARE_THROW(0 < avcodec_parameters_from_context(codec_par, rhs._avcontext), "decoder create fail");
+
+		DECLARE_THROW(!decoder_open_test(dump_attr/*when test by codec parameter, this attr parmeter is none used*/,
+				nullptr,
+				nullptr,
+				codec_par),
+				"can't alloc decoder");
+		avcodec_parameters_free(&codec_par);
+		return *this;
 	}
 
 private:
@@ -201,7 +281,6 @@ private:
 			{
 				if(avcodec_parameters_to_context(_avcontext, temppar) < 0)
 				{
-					printf("=====================111555555555\n");
 					break;
 				}
 
@@ -247,9 +326,9 @@ private:
 
 
 			if(_avcontext->codec_type == AVMEDIA_TYPE_AUDIO)
-				decode = avcodec_decode_audio4;
+				_decode = avcodec_decode_audio4;
 			else if(_avcontext->codec_type == AVMEDIA_TYPE_VIDEO)
-				decode = avcodec_decode_video2;
+				_decode = avcodec_decode_video2;
 
 
 			return true;
@@ -268,7 +347,7 @@ private:
 
 	}
 	std::function<int(AVCodecContext *avctx, AVFrame *frame,
-			                          int *got_frame_ptr, const AVPacket *avpkt)> decode;
+			                          int *got_frame_ptr, const AVPacket *avpkt)> _decode;
 	AVCodecContext *_avcontext;
 	avframe_class _frame;
 };

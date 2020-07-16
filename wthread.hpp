@@ -2,15 +2,8 @@
 
 
 
-/*
- 	 	 workqueue thread interface class
- */
-typedef struct WQ workqueue;
-typedef std::function<workqueue *(_dword, _dword)> function_workqueue_open;
-typedef std::function<void (workqueue ** )> function_workqueue_close;
-typedef std::function<_dword (workqueue *, void **, _dword *, _dword )> function_workqueue_recv;
-typedef std::function<_dword (workqueue *, void *, _dword , _dword, int  )>  function_workqueue_send;
 
+typedef struct WQ workqueue;
 template <typename _Class>
 struct _wthread_functor
 /*
@@ -22,7 +15,11 @@ struct _wthread_functor
 	void operator () (
 			std::string name,
 			workqueue *_wq,
-			function_workqueue_recv recv,
+			const std::function<_dword
+				(workqueue *,
+						void **,
+						_dword *,
+						_dword )> &recv,
 			_dword time,
 			Args...args)
 	{
@@ -45,7 +42,11 @@ struct _wthread_functor
 	}
 private:
 	void s(workqueue *_wq,
-			function_workqueue_recv &recv,
+			const std::function<_dword
+				(workqueue *,
+						void **,
+						_dword *,
+						_dword )>  &recv,
 			_dword time,
 			 _Class &o)
 	{
@@ -82,25 +83,40 @@ private:
 	/*
 	 	 	 get workqueue operation functions
 	 */
-	const function_workqueue_open open;
-	const function_workqueue_close close;
-	const function_workqueue_recv recv;
-	const function_workqueue_send send;
-
-
+	const std::function<workqueue *
+	(_dword, _dword)> open;
+	const std::function<void
+	(workqueue ** )> close;
+	const std::function<_dword
+	(workqueue *,
+			void **,
+			_dword *,
+			_dword )> recv;
+	const std::function<_dword
+	(workqueue *,
+			void *,
+			_dword ,
+			_dword,
+			int  )> send;
 public:
+	wthread() = delete;
+	wthread(wthread &rhs) = delete;
+	wthread(const wthread &rhs) = delete;
+	/*just can move it*/
 	wthread( wthread &&rhs):
 		_th(nullptr),
 		_wq(NULL),
 		_wt_name(nullptr),
-		open(WQ_open),
-		close(WQ_close),
-		recv(WQ_recv),
-		send(WQ_send)
+		open(rhs.open),
+		close(rhs.close),
+		recv(rhs.recv),
+		send(rhs.send)
 	{
 		operator = (static_cast<wthread &&>(rhs));
 	}
-	wthread(_dword len, _dword size, char const *wt_name) :
+	wthread(_dword len,/*length of queue*/
+			_dword size,/*size of queue parameter*/
+			char const *wt_name) :
 		_th(nullptr),
 		_wq(NULL),
 		_wt_name(wt_name),
@@ -124,6 +140,11 @@ public:
 	 	 	 start thread
 	 */
 	{
+		if(_th)
+		{
+			/*already running*/
+			return;
+		}
 		_th = new std::thread(_wthread_functor<_Class>(),
 				_wt_name,
 				_wq,
@@ -155,6 +176,10 @@ public:
 	wthread & operator = ( wthread &&rhs)
 	{
 		this->_th = rhs._th;
+//		this->open = rhs.open;
+//		this->recv = rhs.recv;
+//		this->send = rhs.send;
+//		this->close = rhs.close;
 		this->_wq = rhs._wq;
 		this->_wt_name = rhs._wt_name;
 		
@@ -162,7 +187,6 @@ public:
 		rhs._wq = nullptr;
 		rhs._wt_name = nullptr;
 		return *this;
-
 	}
 	void end()
 	{

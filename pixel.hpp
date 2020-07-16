@@ -66,3 +66,6 @@ public:
 		return new pixel(*this);
 	}
 };
+
+
+

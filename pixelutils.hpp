@@ -31,7 +31,7 @@ public:
 				break;
 			}
 			printf("readpkt \n");
-			dec.decoding(pkt, [&](avpacket_class &packet,
+			dec(pkt, [&](avpacket_class &packet,
 					avframe_class & frm, void *ptr)->void{
 				pixelframe pixfrm(*frm.raw());
 				pixfrm >> *this;

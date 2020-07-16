@@ -10,17 +10,22 @@ private:
    double _pts;/*set presentation time if known*/
    enum AVMediaType _type;
 public :
+   raw_media_data() = delete;/*because mediatype always in*/
 	raw_media_data(enum AVMediaType t) :
 		_allocator(__base__malloc__),
 		_deallocator(__base__free__),
 		_data_ptr(nullptr),
-                _data_size(0),_pts(0.0), _type(t) { }
+                _data_size(0),
+				_pts(0.0),
+				_type(t) { }
 	raw_media_data
 	(const raw_media_data &rhs) :
 		_allocator(__base__malloc__),
 		_deallocator(__base__free__),
 		_data_ptr(nullptr),
-                _data_size(0),_pts(0.0),_type(rhs._type)
+                _data_size(0),
+				_pts(0.0),
+				_type(rhs._type)
 	{
 		if(rhs._data_ptr &&
 				rhs._data_size > 0)
@@ -28,7 +33,7 @@ public :
 			_data_size = rhs._data_size;
 			_data_ptr = (uint8_t *)_allocator(_data_size);
 			memcpy(_data_ptr, rhs._data_ptr, _data_size);
-                        _pts = rhs._pts;
+           _pts = rhs._pts;
 		}
 	}
 	raw_media_data(raw_media_data &&rhs) :

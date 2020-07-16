@@ -12,6 +12,9 @@ extern "C"
 #define INT64_C(c) (c ## LL)
 #define UINT64_C(c) (c ## ULL)
 
+/*
+	get ffmpeg
+ */
 #include <libavutil/timestamp.h>
 #include <libavcodec/avcodec.h>
 #include <libavfilter/avfilter.h>
@@ -30,7 +33,9 @@ extern "C"
 }
 
 
-
+/*
+ 	 get live555
+ */
 #include "UsageEnvironment.hh"
 #include "BasicUsageEnvironment.hh"
 #include "Groupsock.hh"
@@ -38,15 +43,15 @@ extern "C"
 #include "liveMedia.hh"
 
 
-
+/*
+ 	 get workqueue
+ */
 #include "WQ.h"
 
-#define LOCATION_STEMP	"> [File : %s] [Function : %s] [Line : %d]"
-#define LOCATION_FILE	(__FILE__)
-#define LOCATION_FUNC	(	__FUNCTION__  )
-#define LOCATION_LINE	(	  __LINE__    )
-#define log_at()	printf(LOCATION_STEMP"\r\n", LOCATION_FILE, LOCATION_FUNC, LOCATION_LINE);
 
+/*
+ 	 get stl c++
+ */
 #include <type_traits>
 #include <iostream>
 #include <execinfo.h>
@@ -65,6 +70,10 @@ extern "C"
 #include <fstream>
 #include <iostream>
 #include <functional>
+
+/*
+ 	 livemedia main
+ */
 #include "utils.hpp"
 #include "filter.hpp"
 #include "dlog.hpp"
@@ -89,10 +98,11 @@ extern "C"
 #include "framescheduler.hpp"
 #include "uvc.hpp"
 #include "live5scheduler.hpp"
+#include "live5rtspclient.hpp"
+#include "live5livemediapp_sessions_parameters.hpp"
+#include "live5livemediapp_sessions_source.hpp"
 #include "live5livemediapp_sessions.hpp"
 #include "live5rtspserver.hpp"
-#include "live5rtspclient.hpp"
-#include "mediaserver.hpp"
 #include "playback_inst.hpp"
 #include "local_playback.hpp"
 #include "rtsp_playback.hpp"

@@ -93,30 +93,29 @@ public:
 };
 
 
-/*
- 	 	 using presentation time stamp
- */
-
-struct pcmframe_pts : public pcmframe
+class pcmframe_presentationtime : public pcmframe
 {
+protected:
 	double _pts;
-	pcmframe_pts(const pcmframe &f) : pcmframe(f), _pts(0.0){}
-	void operator()(const AVRational &rational)
+	AVRational _rational;
+
+public:
+	pcmframe_presentationtime(const pcmframe &f,
+			const AVRational rational) :
+				pcmframe(f),
+				_pts(0.0),
+				_rational(rational){}
+	double operator()()
 	{
-		_pts = test_pts(rational);
-	}
-	double test_pts(const AVRational &rational)
-	{
-		/*
-		 	 audio need pts outside
-		 */
-		double test_val = 0.0;
+		if(_pts != 0.0)
+		{
+			return _pts;
+		}
 		if(raw()->pkt_dts != AV_NOPTS_VALUE)
 		{
-			test_val = av_q2d(rational) * raw()->pkt_pts;
+			_pts = av_q2d(_rational) * raw()->pkt_pts;
 		}
-		return test_val;
+		return _pts;
 	}
-
 };
 

@@ -10,8 +10,10 @@ public:
 		friend class live5rtspclient;
 	private:
 		char *_title;
+		bool _bypassfiltered;
 		mediasubsession(MediaSession& parent) : MediaSubsession(parent),
-				_title(nullptr){}
+				_title(nullptr),
+				_bypassfiltered(false){}
 		  virtual ~mediasubsession()
 		  {   delete[] _title; }
 		  /*
@@ -38,6 +40,15 @@ public:
 		  bool hastitle() const { return _title != nullptr; }
 		  char *strdup_title() const { return hastitle() ? strDup(_title) : nullptr;}
 		  char const *ref_title() const {return _title;}
+		  void setbypassfiltered(bool bfilter)
+		  {
+			   /*calling our callback function 'setup'*/
+			  _bypassfiltered = bfilter;
+		  }
+		  bool isbypassfiltered() const
+		  {
+			  return _bypassfiltered;
+		  }
 	};
 
 	typedef enum
@@ -53,7 +64,7 @@ public:
 	struct report
 	{
 		typedef std::function<void (void *ptr, live5rtspclient::mediasubsession const &)> except_subsession;
-		typedef std::function<bool (void *ptr, live5rtspclient::mediasubsession const &)> setup_subsession;
+		typedef std::function<bool (void *ptr, live5rtspclient::mediasubsession /*none const for filtered set*/ &)> setup_subsession;
 		typedef std::function<void (void *ptr, live5rtspclient::mediasubsession const &)> bye_subsession;
 		typedef std::function<void (void *ptr, live5rtspclient::mediasubsession const &, unsigned char *, unsigned, unsigned,
 				  struct timeval, unsigned)> read_subsession;
@@ -219,19 +230,24 @@ protected:
 		}
 
 
-		static MediaSink *createNew(UsageEnvironment &env, const mediasubsession &subsession)
+		static MediaSink *createNew(UsageEnvironment &env,  mediasubsession &subsession)
 		{
 			if(!subsession.mediumName() ||
 					!subsession.codecName())
 			{
 				return nullptr;
 			}
+			if ( subsession.isbypassfiltered())
+			{
+
+				return new sink_bypass(env, subsession);
+			}
 			if(subsession.mediumName()[0] == 'v' ||
 					subsession.mediumName()[0] == 'V' )
 			{
 				if(!strcmp(subsession.codecName(), "H264"))
 				{
-					return new sink_h264(env, subsession);
+					return new sink_h264(env, subsession, true/*have startcode*/);
 				}
 			}
 			if(subsession.mediumName()[0] == 'a' ||
@@ -253,6 +269,23 @@ protected:
 			}
 			return nullptr;
 		}
+	};
+	class sink_bypass : public mediasink
+	{
+		PresentationTimeSessionNormalizer *_normalizer;
+		friend class live5rtspclient;
+		sink_bypass (UsageEnvironment &env,
+				 mediasubsession &subsession) :
+					mediasink(env, subsession, LIVE5_BUFFER_SIZE),
+					_normalizer(new PresentationTimeSessionNormalizer(env))
+		{
+			subsession.addFilter(_normalizer->createNewPresentationTimeSubsessionNormalizer(subsession.readSource(),
+					subsession.rtpSource(),
+					subsession.codecName()));
+			subsession.addFilter(H264VideoStreamDiscreteFramer
+							 ::createNew(env, subsession.readSource()));
+		}
+		virtual ~sink_bypass(){}
 	};
 
 	class sink_mpeg4_aac_hbr  : public mediasink
@@ -280,6 +313,7 @@ protected:
 		friend class live5rtspclient;
 		bool _first;
 		char const *_sprop;
+		bool _have_startcode;
 		virtual void afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes,
 					  struct timeval presentationTime, unsigned durationInMicroseconds)
 		{
@@ -304,15 +338,28 @@ protected:
 							nal == 8/*pps*/)
 					{
 						_dword datasize = 0;
-						datasize = 4/*start code 0x00, 0x00, 0x00, 0x01*/ + record[i].sPropLength;/*sps length*/
+						if(_have_startcode)
+						{
+							datasize = 4/*start code 0x00, 0x00, 0x00, 0x01*/ + record[i].sPropLength;/*sps length*/
+						}
+						else
+						{
+							datasize = record[i].sPropLength;
+						}
+
+
 						unsigned char pdata[datasize];
-						pdata[0] = 0x00;
-						pdata[1] = 0x00;
-						pdata[2] = 0x00;
-						pdata[3] = 0x01;
+						if(_have_startcode)
+						{
+							pdata[0] = 0x00;
+							pdata[1] = 0x00;
+							pdata[2] = 0x00;
+							pdata[3] = 0x01;
+						}
 
 
-						memcpy(pdata + 4, record[i].sPropBytes, record[i].sPropLength);
+
+						memcpy(pdata + (_have_startcode ? 4 : 0), record[i].sPropBytes, record[i].sPropLength);
 						((live5rtspclient*)(_subsession.miscPtr))->_notify._read_subsession(((live5rtspclient*)(_subsession.miscPtr))->_notify._ptr, _subsession,
 								pdata,
 								datasize,
@@ -324,23 +371,28 @@ protected:
 				delete [] record;
 				_first = true;
 			}
-			unsigned char incomData[frameSize + 4];
-			memset(incomData, 0, frameSize + 4);
-			incomData[0] = 0x00;
-			incomData[1] = 0x00;
-			incomData[2] = 0x00;
-			incomData[3] = 0x01;
-			memcpy(incomData+4, _buffer, frameSize);
+			unsigned codesize = (_have_startcode ? frameSize + 4 : frameSize);
+			unsigned char incomData[codesize];
+			memset(incomData, 0, codesize);
+			if(_have_startcode)
+			{
+				incomData[0] = 0x00;
+				incomData[1] = 0x00;
+				incomData[2] = 0x00;
+				incomData[3] = 0x01;
+			}
+
+			memcpy(incomData+(_have_startcode ? 4 : 0), _buffer, frameSize);
 			((live5rtspclient*)(_subsession.miscPtr))->_notify._read_subsession(((live5rtspclient*)(_subsession.miscPtr))->_notify._ptr, _subsession,
 					incomData,
-					frameSize+4,
+					codesize,
 					numTruncatedBytes,
 					presentationTime,
 					durationInMicroseconds);
 			continuePlaying();
 		}
-		sink_h264(UsageEnvironment &env, const mediasubsession &subsession) : mediasink(env, subsession, LIVE5_BUFFER_SIZE),
-		_first(false), _sprop(subsession.fmtp_spropparametersets()){}
+		sink_h264(UsageEnvironment &env, const mediasubsession &subsession, bool startcode) : mediasink(env, subsession, LIVE5_BUFFER_SIZE),
+		_first(false), _sprop(subsession.fmtp_spropparametersets()), _have_startcode(startcode){}
 		virtual ~sink_h264(){}
 	};
 	TaskToken _scheduledtoken;
@@ -360,7 +412,7 @@ protected:
 		{
 			if(code != 0)
 			{
-				printf("%s\n", str);
+				livemedia_pp::ref()->log()(dlog::normal, "%s", str);
 				break;
 			}
 			sendcommand(rtsp_describe);
@@ -373,7 +425,7 @@ protected:
 		{
 			if(code != 0)
 			{
-				printf("%s\n", str);
+				livemedia_pp::ref()->log()(dlog::normal, "%s", str);
 				break;
 			}
 			_session = mediasession::createNew(envir(), str);
@@ -404,6 +456,7 @@ protected:
 					_notify._except_subsession(_notify._ptr, *_subsession);
 					continue;
 				}
+
 				sendcommand(rtsp_setup);
 				break;
 			}
@@ -420,7 +473,7 @@ protected:
 		{
 			if(code != 0)
 			{
-				printf("%s\n", str);
+				livemedia_pp::ref()->log()(dlog::normal, "%s", str);
 				_notify._except_subsession(_notify._ptr, *_subsession);
 				if(_subsession->sink)Medium::close(_subsession->sink);
 				_subsession->sink = nullptr;
@@ -480,7 +533,7 @@ protected:
 	{
 		if(code != 0)
 		{
-			printf("%s\n", str);
+			livemedia_pp::ref()->log()(dlog::normal, "%s", str);
 			delete [] str;
 			_notify._except_session(_notify._ptr);
 			return;
@@ -519,7 +572,7 @@ protected:
 	{
 		if(code != 0)
 		{
-			printf("can't allow method pause \n%s\n", str);
+			livemedia_pp::ref()->log()(dlog::warnning, "can't allow method pause \n%s\n", str);
 			delete [] str;
 			/*
 			 	 no puase is not except
@@ -553,7 +606,7 @@ protected:
 	{
 		if(code != 0)
 		{
-			printf("can't allow method resume\n%s\n", str);
+			livemedia_pp::ref()->log()(dlog::warnning, "can't allow method resume\n%s\n", str);
 			delete [] str;
 			/*
 				 no resume is not except

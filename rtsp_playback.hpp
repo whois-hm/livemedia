@@ -12,116 +12,39 @@ class rtsp_playback :
 		rtsp_playback_state_close,
 		rtsp_playback_state_max
 	};
-	struct pixelframe_pts :
+	struct pixelframe_presentationtime_from_normalplay :
 			public pixelframe_presentationtime
 	{
-		pixelframe_pts(const pixelframe &f,
+		pixelframe_presentationtime_from_normalplay(const pixelframe &f,
 				double normalplaytime) :
-			pixelframe_presentationtime(f)
-			{_pts = normalplaytime;}
-		virtual ~pixelframe_pts(){}
-		virtual double getpts()
-		{
-			return _pts;
-		}
-		void operator()()
-		{
-			/*
-			 	 already filed value pts
-			 */
-		}
+					pixelframe_presentationtime(f,
+							AVRational{0,0}/*unused rational just temp value. we use normalplaytime*/)
+			{_pts = normalplaytime;/*save pts. return only operator ()*/}
 	};
 
-	struct pcmframe_pts :
+	struct pcmframe_pts_from_normalplay :
 			public pcmframe_presentationtime
 	{
-		double _copypts;
-		pcmframe_pts(const pcmframe &f,
+		pcmframe_pts_from_normalplay(const pcmframe &f,
 				double normalplaytime) :
-			pcmframe_presentationtime(f),
-			_copypts(normalplaytime)
+			pcmframe_presentationtime(f,
+					AVRational{0,0}/*unused rational just temp value. we use normalplaytime*/)
 		{_pts = normalplaytime;}
-		virtual ~pcmframe_pts(){}
-		virtual double getpts()
-		{
-			return _pts;
-		}
-		void operator()()
-		{
-			/*
-				 already filed value pts
-			 */
-		}
-		double guesspts()
-		{
-			return _copypts;
-		}
+
 	};
 
 	struct framescheduler :
 			public avframescheduler
-			<pixelframe_pts, pcmframe_pts>
+			<pixelframe_presentationtime_from_normalplay, pcmframe_pts_from_normalplay>
 	{
 		framescheduler(const avattr &attr) :
 			avframescheduler(attr){ }
 		virtual ~framescheduler(){}
-		virtual void usingframe( pixelframe_pts &rf)
+		virtual void usingframe( pixelframe_presentationtime_from_normalplay &rf)
 		{ rf(); /*unnecessary function calls*/}
-		virtual void usingframe( pcmframe_pts &rf)
+		virtual void usingframe( pcmframe_pts_from_normalplay &rf)
 		{ rf(); /*unnecessary function calls*/}
 	};
-
-
-	class rtsppacket : public avpacket_class
-	{
-		/*
-		 	 redefiniton packet class
-		 */
-	public:
-		/*
-		 	 saved live5 values
-		 */
-		unsigned _truncatedbyte;
-		struct timeval _presentationtime;
-		unsigned _durationinmicroseconds;
-		double _normalplaytime;
-	public:
-		rtsppacket(unsigned char *data,  unsigned size, unsigned truncatedbyte,
-				  struct timeval presentationtime, unsigned durationinmicroseconds,
-				  double normalplaytime) :
-					  avpacket_class(),
-					  _truncatedbyte (truncatedbyte),
-					  _presentationtime(presentationtime),
-					  _durationinmicroseconds(durationinmicroseconds),
-					  _normalplaytime(normalplaytime)
-		{
-			DECLARE_THROW(av_new_packet(&_pkt, size), "can't av_new_packet");
-			memcpy(_pkt.data, data, size);
-		}
-		virtual ~rtsppacket()
-		{ }
-		rtsppacket(rtsppacket const &rhs) :
-			avpacket_class(dynamic_cast<avpacket_class const &>(rhs)),
-			_truncatedbyte(rhs._truncatedbyte),
-			_presentationtime(rhs._presentationtime),
-			_durationinmicroseconds(rhs._durationinmicroseconds),
-			_normalplaytime(rhs._normalplaytime){ }
-		rtsppacket const &operator = (rtsppacket const &rhs)
-		{
-			avpacket_class::operator =(dynamic_cast<avpacket_class const &>(rhs));
-			_truncatedbyte = rhs._truncatedbyte;
-			_presentationtime = rhs._presentationtime;
-			_durationinmicroseconds = rhs._durationinmicroseconds;
-			_normalplaytime = rhs._normalplaytime;
-			return *this;
-		}
-		rtsppacket *clone() const
-		{
-			return new rtsppacket(*this);
-		}
-	};
-
-
 
 	class stream :
 			public ::decoder
@@ -178,7 +101,7 @@ class rtsp_playback :
 		{
 			if(_type == AVMEDIA_TYPE_VIDEO)
 			{
-				pixelframe_pts  _pixelframe(*frm.raw(),
+				pixelframe_presentationtime_from_normalplay  _pixelframe(*frm.raw(),
 						dynamic_cast<const rtsppacket &>(pkt)._normalplaytime);
 
 				swxcontext_class (dynamic_cast<pixelframe &>(_pixelframe),
@@ -190,7 +113,7 @@ class rtsp_playback :
 			else if(_type == AVMEDIA_TYPE_AUDIO)
 			{
 
-				pcmframe_pts  _pcmframe(*frm.raw(),
+				pcmframe_pts_from_normalplay  _pcmframe(*frm.raw(),
 						dynamic_cast<const rtsppacket &>(pkt)._normalplaytime);
 
 				swxcontext_class (dynamic_cast<pcmframe &>(_pcmframe) ,
@@ -206,7 +129,7 @@ class rtsp_playback :
 
 		void put_packet(stream::fucntor_par *par)
 		{
-			decoding(dynamic_cast<avpacket_class &>(*par->putpacket.pkt),
+			decoder::operator()(dynamic_cast<avpacket_class &>(*par->putpacket.pkt),
 					*this);
 			delete par->putpacket.pkt;
 		}
@@ -309,13 +232,13 @@ class rtsp_playback :
 			}
 
 
-			unsigned mspts = (pkt._presentationtime.tv_sec * 1000) + (pkt._presentationtime.tv_usec / 1000);
-			printf("%s durationmicroseconds : %d, presentation time : %d/%d normal playtime : %f\n",
-					_mediatype == AVMEDIA_TYPE_VIDEO ? "video" : "audio",
-							pkt._durationinmicroseconds,
-							pkt._presentationtime.tv_sec,
-							pkt._presentationtime.tv_usec,
-							pkt._normalplaytime);
+//			unsigned mspts = (pkt._presentationtime.tv_sec * 1000) + (pkt._presentationtime.tv_usec / 1000);
+//			printf("%s durationmicroseconds : %d, presentation time : %d/%d normal playtime : %f\n",
+//					_mediatype == AVMEDIA_TYPE_VIDEO ? "video" : "audio",
+//							pkt._durationinmicroseconds,
+//							pkt._presentationtime.tv_sec,
+//							pkt._presentationtime.tv_usec,
+//							pkt._normalplaytime);
 
 
 			stream::fucntor_par par;

@@ -17,75 +17,13 @@ class local_playback :
 		local_playback_state_run,
 		local_playback_state_close
 	};
-	struct pixelframe_pts :
-			public pixelframe_presentationtime
-	{
-		AVRational _rational;
-		pixelframe_pts(const pixelframe &f,
-				const AVRational &rational) :
-			pixelframe_presentationtime(f),
-			_rational(rational){}
-		virtual ~pixelframe_pts(){}
-		virtual double getpts()
-		{
-			return _pts;
-		}
-		void operator()()
-		{
-                    if(raw()->pkt_dts != AV_NOPTS_VALUE)
-                    {
-                        _pts = av_frame_get_best_effort_timestamp(raw());
-                        if(_pts != AV_NOPTS_VALUE)
-                        {
-                            _pts = av_q2d(_rational) * _pts;
-                        }
-                    }
-//			if(raw()->best_effort_timestamp != AV_NOPTS_VALUE)
-//			{
-//                            _pts = av_q2d(_rational) * _pts;
 
-//			}
-		}
-	};
-
-	struct pcmframe_pts :
-			public pcmframe_presentationtime
-	{
-		AVRational _rational;
-		pcmframe_pts(const pcmframe &f,
-				const AVRational &rational) :
-			pcmframe_presentationtime(f),
-			_rational(rational){}
-		virtual ~pcmframe_pts(){}
-		virtual double getpts()
-		{
-			return _pts;
-		}
-		void operator()()
-		{
-			_pts = guesspts();
-		}
-
-		double guesspts()
-		{
-			/*
-			 	 audio need pts outside
-			 */
-			double test_val = 0.0;
-			if(raw()->pkt_dts != AV_NOPTS_VALUE)
-			{
-
-				test_val = av_q2d(_rational) * raw()->pkt_pts;
-			}
-			return test_val;
-		}
-	};
 
 
 
 	struct framescheduler :
 			public avframescheduler
-			<pixelframe_pts, pcmframe_pts>
+			<pixelframe_presentationtime, pcmframe_presentationtime>
 	{
 			AVRational _videorational;
 			AVRational _audiorational;
@@ -108,7 +46,7 @@ class local_playback :
         virtual int64_t global_clock()
         {
             return avframescheduler
-                        <pixelframe_pts, pcmframe_pts>::global_clock() ;
+                        <pixelframe_presentationtime, pcmframe_presentationtime>::global_clock() ;
         }
         void start_delta()
         {
@@ -134,10 +72,10 @@ class local_playback :
 		{ _videorational = rational; }
 		void set_audio_rational(const AVRational &rational)
 		{ _audiorational = rational; }
-		virtual void usingframe( pixelframe_pts &rf)
+		virtual void usingframe( pixelframe_presentationtime &rf)
                 { rf(); }
 		
-		virtual void usingframe( pcmframe_pts &rf)
+		virtual void usingframe( pcmframe_presentationtime &rf)
                 { rf();}
 	};
 
@@ -164,7 +102,7 @@ class local_playback :
 				 	 	 make frame
 				 */
 
-				pixelframe_pts _pixelframe(*frm.raw(),
+				pixelframe_presentationtime _pixelframe(*frm.raw(),
 						((local_playback *)puser)->_framescheduler._videorational);
 
 				/*
@@ -191,7 +129,7 @@ class local_playback :
 				 */
 
 
-				pcmframe_pts _pcmframe(*frm.raw(),
+				pcmframe_presentationtime _pcmframe(*frm.raw(),
 						((local_playback *)puser)->_framescheduler._audiorational);
 
 				/*
@@ -252,15 +190,15 @@ class local_playback :
 					}
 					if(_type == AVMEDIA_TYPE_VIDEO)
                                         {
-						makeframe = decoder::decoding(pkt, functor_makeframe_video(), this->_ptr) > 0;
+						makeframe = decoder::operator()(pkt, functor_makeframe_video(), this->_ptr) > 0;
 
                                         }
 
 
 					if(_type == AVMEDIA_TYPE_AUDIO)
-						makeframe =  decoder::decoding(pkt, functor_makeframe_audio(), this->_ptr)  > 0;
+						makeframe =  decoder::operator()(pkt, functor_makeframe_audio(), this->_ptr)  > 0;
 
-						usleep(1000 * 5);
+						//usleep(1000 * 5);
 
 
 				}

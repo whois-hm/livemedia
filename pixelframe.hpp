@@ -22,7 +22,7 @@ private:
 public:
 	pixelframe() = delete;
 	pixelframe(pixel &rhs) :
-		avframe_class_type()
+		avframe_class_type<pixel>()
 	{
 		if(rhs.can_take())
 		{
@@ -49,7 +49,7 @@ public:
 		unsigned height,
 		enum AVPixelFormat fmt,
 		void *p) : 
-		avframe_class_type()
+		avframe_class_type<pixel>()
 	{
 	DECLARE_THROW(width <= 0, "pixelframe invalid width");
 	DECLARE_THROW(height <= 0, "pixelframe invalid height");
@@ -98,6 +98,18 @@ public:
 				(dynamic_cast<const avframe_class_type &>(_class));
 
 		return *this;
+	}
+	int width()
+	{
+		return raw()->width;
+	}
+	int height()
+	{
+		return raw()->height;
+	}
+	enum AVPixelFormat format()
+	{
+		return (enum AVPixelFormat)raw()->format;
 	}
 	virtual int len()
 	{
@@ -149,22 +161,35 @@ public:
 
 };
 
-
-/*
- 	 	 using presentation time stamp
- */
-struct pixelframe_pts : public pixelframe
+class pixelframe_presentationtime : public pixelframe
 {
+protected:
 	double _pts;
-	pixelframe_pts(const pixelframe &f) : pixelframe(f), _pts(0.0){}
-	void operator()(const AVRational &rational)
+	AVRational _rational;
+public:
+	pixelframe_presentationtime(const pixelframe &f,
+			const AVRational rational) : pixelframe(f),
+					_pts(0.0),
+					_rational(rational){}
+	virtual ~pixelframe_presentationtime(){}
+	double operator()()
 	{
-			if(raw()->best_effort_timestamp != AV_NOPTS_VALUE)
-			{
-				_pts = av_q2d(rational) * _pts;
-			}
+		if(_pts != 0.0)
+		{
+			/*return cache for speed*/
+			return _pts;
+		}
+		/*
+		 	 first. calc pts from rational
+		 */
+       if(raw()->pkt_dts != AV_NOPTS_VALUE)
+        {
+            _pts = av_frame_get_best_effort_timestamp(raw());
+            if(_pts != AV_NOPTS_VALUE)
+            {
+                _pts = av_q2d(_rational) * _pts;
+            }
+        }
+       return _pts;
 	}
-
 };
-
-

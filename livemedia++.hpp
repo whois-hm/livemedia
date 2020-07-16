@@ -3,7 +3,7 @@
 
 
 
-class livemedia_pp
+class livemedia_pp final
 {
 /*
 	declare inner class's
@@ -278,7 +278,7 @@ public:
 		_dlog.console_writer_install();
 		_dlog.outbuffer_increase(1024);
 		_dlog.level_install(dlog::normal);
-		_dlog.prefix_install("[livemedia_pp]");
+		_dlog.prefix_install("[livemedia_pp] ");
 	}
 	virtual ~livemedia_pp()
 	{
@@ -388,7 +388,7 @@ public:
 			_namedthreads.remove_if([&](namedthread *a)->bool{
                 bool res = (*a) == (*t);
 
-                    return (*a) == (*t);
+                    return res;
 				});
 		}		
 	}

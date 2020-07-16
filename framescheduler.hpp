@@ -12,7 +12,9 @@
 
 
 
-template <typename _Tframe_pixel, typename _Tframe_pcm> class framebuffering_type
+template <typename _Tframe_pixel,
+typename _Tframe_pcm>
+class framebuffering_type
 {
 protected:
 
@@ -182,26 +184,6 @@ typedef framebuffering_type<pixelframe, pcmframe> avframebuffering;
 
 
 
-class pixelframe_presentationtime : public pixelframe
-{
-protected:
-	double _pts;
-	pixelframe_presentationtime(const pixelframe &f) : pixelframe(f), _pts(0.0){}
-	virtual ~pixelframe_presentationtime(){}
-public:
-	virtual double getpts() = 0;
-};
-class pcmframe_presentationtime : public pcmframe
-{
-protected:
-	double _pts;
-	pcmframe_presentationtime(const pcmframe &f) : pcmframe(f), _pts(0.0){}
-	virtual ~pcmframe_presentationtime(){}
-        virtual double guesspts() = 0;
-public:
-	virtual double getpts() = 0;
-
-};
 
 /* Skip or repeat the frame. Take delay into account
  FFPlay still doesn't "know if this is the best guess." */
@@ -214,9 +196,14 @@ public:
  	 	 scheduling frame based presentation time
  */
 
-template <typename _type_pixelframe, typename _type_pcmframe> class avframescheduler :
-		public framebuffering_type<_type_pixelframe, _type_pcmframe>
+template <typename _type_pixelframe,
+typename _type_pcmframe>
+class avframescheduler :
+		public framebuffering_type<_type_pixelframe,
+		_type_pcmframe>
 {
+	typedef framebuffering_type<_type_pixelframe,
+			_type_pcmframe> Tclass;
 protected:
     virtual  int64_t global_clock()
     {
@@ -253,8 +240,8 @@ protected:
 		}
 		else if(_masterclock == AVMEDIA_TYPE_AUDIO)
 		{
-			return _audio_last_pts - (framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first._index *
-					std::get<0>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr))/_audio_bps;
+			return _audio_last_pts - (Tclass::_pcmframe.first._index *
+					std::get<0>(Tclass::_pcmframe.first.audio_output_attr))/_audio_bps;
 		}
 		return 0.0;
 	}
@@ -271,7 +258,7 @@ protected:
 		 	 	 get delay from current frame - last frame
 		 */
 
-		_video[_video_type::current_presentation_time] = rf.getpts();
+		_video[_video_type::current_presentation_time] = rf();
         _video[_video_type::global_timer] = (double)global_clock();
 		delay = _video[_video_type::current_presentation_time] - _video[_video_type::last_presentation_time];
 
@@ -328,7 +315,7 @@ protected:
 	virtual void usedframe( _type_pcmframe &rf, int size_from_array = 0)
 	{
 
-		_audio_last_pts = rf.guesspts() /*input pts */ +
+		_audio_last_pts = rf() /*input pts */ +
 				(size_from_array)/*input frame size */ /
 				(double)_audio_bps;
 	}
@@ -338,7 +325,7 @@ protected:
 
 public:
 	avframescheduler(const avattr &attr) :
-		framebuffering_type<_type_pixelframe, _type_pcmframe>(attr),
+		Tclass(attr),
 		_masterclock(AVMEDIA_TYPE_UNKNOWN)
 	{
 		data_clear();
@@ -366,10 +353,10 @@ public:
 	    _audiodiff_avgcoef = 0.0;
 		_audio_last_pts = 0.0;
 		/*channel * samplingrate * sample number*/
-		_audio_bps = std::get<0>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr) *
-				std::get<1>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr) *
-				av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr));
-		framebuffering_type<_type_pixelframe, _type_pcmframe>::data_clear();
+		_audio_bps = std::get<0>(Tclass::_pcmframe.first.audio_output_attr) *
+				std::get<1>(Tclass::_pcmframe.first.audio_output_attr) *
+				av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr));
+		Tclass::data_clear();
 	}
 	void set_clock_master(enum AVMediaType masterclock)
 	{
@@ -387,12 +374,12 @@ public:
 
 	pixel &operator >>(pixel &pf)
 	{
-            if(!framebuffering_type<_type_pixelframe, _type_pcmframe>::_pixelframe.empty())
+            if(!Tclass::_pixelframe.empty())
             {
-                pf.setpts(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pixelframe.front().getpts());
+                pf.setpts(Tclass::_pixelframe.front()());
             }
 
-            return framebuffering_type<_type_pixelframe, _type_pcmframe>::operator >>(pf);
+            return Tclass::operator >>(pf);
 	}
 	pcm_require &operator >>(pcm_require &pf)
 	{
@@ -401,7 +388,7 @@ public:
 	    int manipulate_size = 0;
 	    int min_size = 0;
 	    int max_size = 0;
-		pcm_require &dump = framebuffering_type<_type_pixelframe, _type_pcmframe>::operator >>(pf);
+		pcm_require &dump = Tclass::operator >>(pf);
 		if(!dump.first.can_take())
 		{
 			return dump;
@@ -413,7 +400,7 @@ public:
 		do
 		{
 			double audio_current_clock =
-					_audio_last_pts - (framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first._index * std::get<0>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr))/
+					_audio_last_pts - (Tclass::_pcmframe.first._index * std::get<0>(Tclass::_pcmframe.first.audio_output_attr))/
 					_audio_bps;
 
                         pf.first.setpts(audio_current_clock);
@@ -489,7 +476,7 @@ public:
 
 			int append_size = std::abs(manipulate_size);
 			int appended_len = dump.first.size() + append_size;
-			int bytesamplesize = av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr));
+			int bytesamplesize = av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr));
 			const uint8_t * lastsample = dump.first.read() + (dump.first.size() - bytesamplesize);
 
 
@@ -507,10 +494,10 @@ public:
 				int ,
 				int ,
 				enum AVSampleFormat>
-				(std::get<0>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr),
-						std::get<1>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr),
-						dump.first.size() / av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr)),
-				(enum AVSampleFormat)std::get<2>(framebuffering_type<_type_pixelframe, _type_pcmframe>::_pcmframe.first.audio_output_attr)));
+				(std::get<0>(Tclass::_pcmframe.first.audio_output_attr),
+						std::get<1>(Tclass::_pcmframe.first.audio_output_attr),
+						dump.first.size() / av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr)),
+				(enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr)));
 
 		return dump;
 	}

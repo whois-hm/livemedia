@@ -66,29 +66,39 @@ inline void operator delete[](void *ptr)
 */
 
 
-
 typedef std::lock_guard<std::mutex> autolock;
-inline bool contain_string(char const *str, char const *findstr)
-{
-	std::string dump(str);
 
-	if(dump.empty() ||
+
+inline
+bool contain_string(char const *str,
+		char const *findstr)
+/*
+ 	 find character's from str
+ */
+{
+	if(!str ||
 			!findstr)
 	{
 		return false;
 	}
+	std::string dump(str);
+
 	return dump.find(findstr) != std::string::npos;
 }
 
 inline
-unsigned  sys_time_c()
+unsigned sys_time_c()
+/*
+ 	 get system time
+ */
 {
 	struct timeval v;
 	gettimeofday(&v, NULL);
 
 	return (v.tv_sec * 1000) + (v.tv_usec / 1000);
 }
-inline int conv_hex_to_string(unsigned char *pSource,
+inline
+int conv_hex_to_string(unsigned char *pSource,
 	int nSource_perByte, 
 	char *pDst, 
 	int nDst)
@@ -207,7 +217,7 @@ public:
 	}
 	_dword issetbit(int fd, _dword flag)
 	{
-		fd_set *t = NULL;
+
 		_dword returnbit = 0;
 		if(fd == -1)
 		{
@@ -275,5 +285,56 @@ struct av_type_string_map
 	char const *operator()(enum AVCodecID codecid)
 	{
 		return avcodec_get_name(codecid);
+	}
+};
+struct media_type_string_support_map
+{
+	char const *operator()(enum AVMediaType media_type)
+	{
+		if(media_type == AVMEDIA_TYPE_VIDEO)
+		{
+			return "video";
+		}
+		if(media_type == AVMEDIA_TYPE_AUDIO)
+		{
+			return "audio";
+		}
+		return nullptr;
+	}
+	enum AVMediaType operator()(char const *media_type)
+	{
+		if(media_type)
+		{
+			if(!strcmp(media_type, media_type_string_support_map::operator ()(AVMEDIA_TYPE_VIDEO)))
+			{
+				return AVMEDIA_TYPE_VIDEO;
+			}
+			if(!strcmp(media_type, media_type_string_support_map::operator ()(AVMEDIA_TYPE_AUDIO)))
+			{
+				return AVMEDIA_TYPE_AUDIO;
+			}
+		}
+		return AVMEDIA_TYPE_UNKNOWN;
+	}
+};
+struct codec_type_string_support_map
+{
+	char const *operator()(enum AVCodecID codecid)
+	{
+		if(codecid == AV_CODEC_ID_H264)
+		{
+			return "H264";
+		}
+	}
+	enum AVCodecID operator()(char const *codecid)
+	{
+		if(codecid)
+		{
+			if(!strcmp(codecid, codec_type_string_support_map::operator ()(AV_CODEC_ID_H264)))
+			{
+				return AV_CODEC_ID_H264;
+			}
+		}
+		return AV_CODEC_ID_NONE;
 	}
 };

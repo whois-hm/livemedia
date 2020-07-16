@@ -294,13 +294,13 @@ public:
 		if(!_prefix.empty())
 		{
 			prefix_size = _prefix.size();
-			if(prefix_size >= _out_buffer_size)
+			if((unsigned)prefix_size >= _out_buffer_size)
 			{
 				prefix_size = _out_buffer_size;
 			}
 			memcpy(out_buffer, _prefix.c_str(), prefix_size);
 		}
-		if(prefix_size < _out_buffer_size)
+		if((unsigned)prefix_size < _out_buffer_size)
 		{
 			va_start(s, format);	
 			vsnprintf(out_buffer + prefix_size, 

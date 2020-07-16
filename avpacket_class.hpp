@@ -4,29 +4,43 @@
  */
 class avpacket_class
 {
+	enum AVMediaType _type;
 public:
-	avpacket_class( )
+	void settype(enum AVMediaType type)
+	{
+		_type = type;
+	}
+	enum AVMediaType gettype()
+	{
+		return _type;
+	}
+	avpacket_class( ) :
+		_type(AVMEDIA_TYPE_UNKNOWN)
 	{
 		av_init_packet(&_pkt);
 	}
-	avpacket_class(   const AVPacket &pkt )
+	avpacket_class(   const AVPacket &pkt ) :
+		_type(AVMEDIA_TYPE_UNKNOWN)
 	{
 		av_init_packet(&_pkt);
 
 		av_packet_ref(&_pkt, &const_cast<AVPacket &>(pkt));
 	}
-	avpacket_class(   AVPacket &&pkt )
+	avpacket_class(   AVPacket &&pkt ) :
+		_type(AVMEDIA_TYPE_UNKNOWN)
 	{
 		av_init_packet(&_pkt);
 
 		av_packet_move_ref(&_pkt, &const_cast<AVPacket &>(pkt));
 	}
-	avpacket_class(   const avpacket_class &pkt )
+	avpacket_class(   const avpacket_class &pkt ) :
+		_type(pkt._type)
 	{
 		av_init_packet(&_pkt);
 		av_packet_ref(&_pkt, &const_cast<AVPacket &>(pkt._pkt));
 	}
-	avpacket_class(   avpacket_class &&pkt )
+	avpacket_class(   avpacket_class &&pkt ) :
+		_type(pkt._type)
 	{
 		av_init_packet(&_pkt);
 		av_packet_move_ref(&_pkt, &const_cast<AVPacket &>(pkt._pkt));
@@ -39,12 +53,14 @@ public:
 	{
 		unref();
 		av_packet_ref(&_pkt, &const_cast<AVPacket &>(pkt._pkt));
+		_type = pkt._type;
 		return *this;
 	}
 	avpacket_class &operator = (avpacket_class &&pkt)
 	{
 		unref();
 		av_packet_move_ref(&_pkt, &const_cast<AVPacket &>(pkt._pkt));
+		_type = pkt._type;
 		return *this;
 	}
 	avpacket_class &operator = (const  AVPacket &pkt)
@@ -86,3 +102,52 @@ protected:
 	AVPacket _pkt;
 
 };
+
+	class rtsppacket : public avpacket_class
+	{
+		/*
+		 	 redefiniton packet class
+		 */
+	public:
+		/*
+		 	 saved live5 values
+		 */
+		unsigned _truncatedbyte;
+		struct timeval _presentationtime;
+		unsigned _durationinmicroseconds;
+		double _normalplaytime;
+	public:
+		rtsppacket(unsigned char *data,  unsigned size, unsigned truncatedbyte,
+				  struct timeval presentationtime, unsigned durationinmicroseconds,
+				  double normalplaytime) :
+					  avpacket_class(),
+					  _truncatedbyte (truncatedbyte),
+					  _presentationtime(presentationtime),
+					  _durationinmicroseconds(durationinmicroseconds),
+					  _normalplaytime(normalplaytime)
+		{
+			DECLARE_THROW(av_new_packet(&_pkt, size), "can't av_new_packet");
+			memcpy(_pkt.data, data, size);
+		}
+		virtual ~rtsppacket()
+		{ }
+		rtsppacket(rtsppacket const &rhs) :
+			avpacket_class(dynamic_cast<avpacket_class const &>(rhs)),
+			_truncatedbyte(rhs._truncatedbyte),
+			_presentationtime(rhs._presentationtime),
+			_durationinmicroseconds(rhs._durationinmicroseconds),
+			_normalplaytime(rhs._normalplaytime){ }
+		rtsppacket const &operator = (rtsppacket const &rhs)
+		{
+			avpacket_class::operator =(dynamic_cast<avpacket_class const &>(rhs));
+			_truncatedbyte = rhs._truncatedbyte;
+			_presentationtime = rhs._presentationtime;
+			_durationinmicroseconds = rhs._durationinmicroseconds;
+			_normalplaytime = rhs._normalplaytime;
+			return *this;
+		}
+		rtsppacket *clone() const
+		{
+			return new rtsppacket(*this);
+		}
+	};
