@@ -272,7 +272,72 @@ public:
 	}
 };
 #endif
+class memio
+{
+	unsigned char *_bank;
+	unsigned _index;
+	unsigned _max;
+	void realloc(unsigned size)
+	{
+		if(size <= 0) size = 100;
+		if(_max <= 0)
+		{
+			_bank = (unsigned char *)__base__malloc__(size);
+			_index = 0;
+			_max = size;
+			return;
+		}
+		if(_max < size)
+		{
+			unsigned char *temp = (unsigned char *)__base__malloc__(size);
+			memcpy(temp, _bank, _index);
+			__base__free__(_bank);
+			_bank = temp;
+			_max = size;
+		}
+	}
+public:
+	memio() : _bank(nullptr), _index(0), _max(0){}
+	virtual ~memio()
+	{
+		if(_bank)
+		{
+			__base__free__(_bank);
+			_bank = nullptr;
+		}
+		_index = _max = 0;
+	}
 
+	unsigned size()
+	{
+		return _index;
+	}
+	void write(unsigned char *from, unsigned size)
+	{
+		if(from &&
+				size > 0)
+		{
+			realloc(_index + size);
+			memcpy(_bank + _index,from,size);
+			_index += size;
+		}
+	}
+	int read(unsigned char *to, unsigned size)
+	{
+		size = _index > size ? size : _index;
+		if(size > 0)
+		{
+			memcpy(to, _bank, size);
+			_index -= size;
+			if(_index > 0)
+			{
+				memcpy(_bank, _bank + size, _index);
+			}
+			return size;
+		}
+		return size;
+	}
+};
 
 
 struct av_type_string_map
@@ -325,6 +390,7 @@ struct codec_type_string_support_map
 		{
 			return "H264";
 		}
+		return nullptr;
 	}
 	enum AVCodecID operator()(char const *codecid)
 	{

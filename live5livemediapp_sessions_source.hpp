@@ -1,71 +1,28 @@
-#pragma once
+#pragma once__
+
+
 class live5livemediapp_serversession_source
 {
-private:
+protected:
 	unsigned _unique_id;
 	unsigned _refcount;/*subsession reference count*/
-	unsigned char *_bank[AVMEDIA_TYPE_NB];/*buffering*/
-	unsigned _index[AVMEDIA_TYPE_NB];
-	unsigned _max[AVMEDIA_TYPE_NB];
+	memio _bank[AVMEDIA_TYPE_NB];
 
 protected:
-	void bank_realloc(enum AVMediaType type, unsigned size)
-	{
-		/*
-			 our bank allocation
-		 */
-		if(size <= 0) size = 100;
-		if(_max[type] <= 0)
-		{
-			_bank[type] = (unsigned char *)__base__malloc__(size);
-			_index[type] = 0;
-			_max[type] = size;
-			return;
-		}
-		if(_max[type] < size)
-		{
-			unsigned char *temp = (unsigned char *)__base__malloc__(size);
-			memcpy(temp, _bank[type], _index[type]);
-			__base__free__(_bank[type]);
-			_bank[type] = temp;
-			_max[type] = size;
-		}
-	}
+
 	void bank_in(enum AVMediaType type, unsigned char *from, unsigned size)
 	{
-		/*
-			 data input
-		 */
-		if(from &&
-				size > 0)
-		{
-			bank_realloc(type, _index[type] + size);
-			memcpy(_bank[type] + _index[type],from,  size);
-			_index[type] += size;
-		}
+		_bank[type].write(from, size);
 	}
 	int bank_drain(enum AVMediaType type, unsigned char *to, unsigned size)
 	{
-		size = _index[type] > size ? size : _index[type];
-		if(size > 0)
-		{
-			memcpy(to, _bank[type], size);
-			_index[type] -= size;
-			if(_index[type] > 0)
-			{
-				memcpy(_bank[type], _bank[type] + size, _index[type]);
-			}
-			return size;
-		}
-		return size;
+		return _bank[type].read(to, size);
 	}
 
 
 	live5livemediapp_serversession_source() :
 		_unique_id(0),
-		_refcount(0)
-
-		{for(int i = 0; i < AVMEDIA_TYPE_NB; i++){_bank[i] = nullptr;_max[i] = 0; _index[i] = 0;}}
+		_refcount(0) {}
 
 
 
@@ -73,7 +30,6 @@ protected:
 public:
 	virtual ~live5livemediapp_serversession_source()
 	{
-		for(int i = 0; i < AVMEDIA_TYPE_NB; i++) { if(_bank[i]) __base__free__(_bank[i]); }
 	}
 	virtual int doGetNextFrame(enum AVMediaType type,
 				unsigned char*to,
@@ -190,42 +146,34 @@ private:
 	{
 		*numtruncatedbyte = 0;
 		int readsize = 0;
-		/*at first request*/
-		if(!_th)
+
+		readsize = bank_drain(type, to, size);
+		if(readsize)
 		{
-			_filter->enable();
-			_th = new std::thread([&]()->void{
-				while(_filter->isenable())
-				{
-					int res = _uvc->waitframe(30);/*tell to uvc 'has frame'*/
-					DECLARE_THROW(res < 0, "source uvc has broken");
-					if(res > 0)/* res == 0	noframe*/
+			return readsize;
+		}
+
+
+		_filter->enable();
+		int res = _uvc->waitframe(-1);/*tell to uvc 'has frame'*/
+		DECLARE_THROW(res < 0, "source uvc has broken");
+		if(res > 0)/* res == 0	noframe*/
+		{
+			_uvc->get_videoframe([&](pixelframe &pix)->void {
+					(*_filter) << pix;/*filtering*/
+					_enc->encoding(pix,[&](avframe_class &frm,
+							avpacket_class &pkt,
+							void * )->void{
 					{
-						_uvc->get_videoframe([&](pixelframe &pix)->void {
-								(*_filter) << pix;/*filtering*/
-								_enc->encoding(pix,[&](avframe_class &frm,
-										avpacket_class &pkt,
-										void * )->void{
-								{
-									autolock a(_lock);
-									bank_in(type, pkt.raw()->data, pkt.raw()->size);
-								}
-							});
-						});
+						bank_in(AVMEDIA_TYPE_VIDEO, pkt.raw()->data, pkt.raw()->size);
+						readsize = bank_drain(type, to, size);
+						gettimeofday(presentationtime, nullptr);
 					}
-				}
+				});
 			});
 		}
 
-		{
-			autolock a(_lock);
-			readsize = bank_drain(type, to, size);
-		}
 
-		if(readsize > 0)
-		{
-			gettimeofday(presentationtime, nullptr);
-		}
 		return readsize;
 	}
 	virtual void doStopGettingFrames(enum AVMediaType type)
@@ -243,6 +191,7 @@ private:
 
 	virtual enum AVCodecID videocodec()
 	{
+
 		if(_enc && _uvc)
 		{
 			return (enum AVCodecID)_attr.get_int(avattr_key::video_encoderid);
@@ -538,7 +487,8 @@ public:
 	virtual rtspclient_filter *create_filter(UsageEnvironment& env,
 			FramedSource* inputSource,
 			enum AVMediaType mediatype,
-			enum AVCodecID codecid)
+			enum AVCodecID codecid,
+			char const *fmtp = nullptr)
 	{
 		return new rtspclient_filter(env, mediatype, codecid, inputSource);
 	}

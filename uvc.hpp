@@ -201,34 +201,29 @@ fail:
 		 */
 
 
+		fd_signal_detector fd_signal;
+		fd_signal.set(_fd);
+		fd_signal.set(_pipe[0]);
 
 
 
-
-		struct pollfd fds[2];
-		memset(fds, 0, sizeof(struct pollfd) * 2);
-		fds[0].fd = _fd;
-		fds[1].fd = _pipe[0];
-		fds[0].events = POLLIN | POLLPRI | POLLRDNORM| POLLERR | POLLHUP | POLLNVAL;
-		fds[1].events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
-
-
-		int res = poll(fds, 2, timeout);
+		int res = fd_signal.sigwait(timeout);
 
 		if(res > 0)
 		{
 
-			if(fds[1].revents & (POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL))
+			if(fd_signal.issetbit_in(_pipe[0]) ||
+					fd_signal.issetbit_err(_pipe[0]))
 			{
 
 				res = -1;
 			}
-			else if(fds[0].revents & (POLLERR | POLLHUP | POLLNVAL))
+			else if(fd_signal.issetbit_err(_fd))
 			{
 
 				res = -1;
 			}
-			else if(fds[0].revents & (POLLIN | POLLPRI | POLLRDNORM))
+			else if(fd_signal.issetbit_in(_fd))
 			{
 				res = 1;
 			}

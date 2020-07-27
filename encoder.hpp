@@ -125,6 +125,7 @@ public:
 			functor &&_f,
 			void *puser = nullptr)
 	{
+		bool has_encoded = false;
 		if(!_avcontext)
 		{
 			return -1;
@@ -141,16 +142,19 @@ public:
 		{
 			frm.raw()->pts = _pts++;
 		}
-		encoded = encode(_avcontext, _pkt.raw(), frm.raw(), &got);	
-		if(got&&
-			encoded >= 0)
+
+
+		encoded = encode(_avcontext, _pkt.raw(), frm.raw(), &got);
+
+		if(encoded >=0&&
+				got)
 		{
+			has_encoded = true;
 			_f(frm, _pkt, puser);
 			_pkt.unref();
 		}
 
-		if(got) return 1;
-		return 0;
+		return has_encoded ? 1 : 0;
 	}
 
 };

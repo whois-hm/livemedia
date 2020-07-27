@@ -313,6 +313,7 @@ private:
 					_avcontext->width = attr.get_int(avattr_key::width);
 					_avcontext->height = attr.get_int(avattr_key::height);
 					_avcontext->pix_fmt = (enum AVPixelFormat)attr.get_int(avattr_key::pixel_format);
+					_avcontext->bit_rate = 400000;
 				}
 			}
 

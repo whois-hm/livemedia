@@ -121,17 +121,22 @@ public :
 	}
 	void write(uint8_t *ptr, size_t size)
 	{
+
 		if(ptr &&
 				size > 0)
 		{
+
 			if(_data_ptr)
 			{
+
 				_deallocator(_data_ptr);
+				_data_ptr = nullptr;
 			}
 
 			_data_ptr = (uint8_t *)_allocator(size);
+
 			_data_size = size;
-			memcpy(_data_ptr, ptr, _data_size);
+			memcpy(_data_ptr, ptr, size);
 
 		}
 	}

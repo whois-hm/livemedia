@@ -25,7 +25,8 @@ class livemediapp_proxy_serversession :  public ProxyServerMediaSession
 			FramedFilter *f = ourfilter->create_filter(envir(),
 					in.readSource(),/*it client session initiated source*/
 					media_type_string_support_map()(in.mediumName()),
-					codec_type_string_support_map()(in.codecName()));
+					codec_type_string_support_map()(in.codecName()),
+					in.fmtp_spropparametersets());
 			delete ourfilter;
 			outputCodecName = strDup(in.codecName());
 		return f;
@@ -50,7 +51,7 @@ public:
 			  char const* username = nullptr,
 			  char const* password = nullptr,
 			  portNumBits tunnelOverHTTPPortNum = 0,
-			  int verbosityLevel = 0,
+			  int verbosityLevel = 10,
 			  int socketNumToServer = -1,
 			  createNewProxyRTSPClientFunc* ourCreateNewProxyRTSPClientFunc
 			  = defaultCreateNewProxyRTSPClientFunc,
@@ -328,7 +329,6 @@ public:
 	virtual FramedSource* createNewStreamSource(unsigned clientSessionId,
 						      unsigned& estBitrate)
 	{
-	
 	/*
 		ondemand create dummy sink for sdp using 'clinetSessionId = 0'
 		so we do not create last source for speed with memory 
@@ -565,12 +565,11 @@ public:
 	{
 		/*tell subsession*/
     	live5livemediapp_serversession_source * session_source = session_in_par(_parameter)._make_sessionsource(session_in_par(_parameter)._target);
-
     	if(session_source &&
     			session_source->videocodec() == AV_CODEC_ID_H264)
 		{
     		this->addSubsession(new livemediapp_h264_servermediasubsession(*this,
-    				session_in_par(_parameter)._type == source_type_uvc ? false :
+    				session_in_par(_parameter)._type == source_type_uvc ? true :
     						session_in_par(_parameter)._reuse_source));
 		}
     	if(session_source &&
@@ -578,7 +577,7 @@ public:
     	{
 			this->addSubsession(new livemediapp_adts_audio_servermediasubsession(*this,
 					session_source->codec(AVMEDIA_TYPE_AUDIO),/*get parameter audio spec*/
-					session_in_par(_parameter)._type == source_type_uvc ? false :
+					session_in_par(_parameter)._type == source_type_uvc ? true :
 				    						session_in_par(_parameter)._reuse_source));
     	}
     	if(session_source)
@@ -596,6 +595,7 @@ public:
 				RTSPServer *ourserver)
 
 	{
+
 		ServerMediaSession *newsession = nullptr;
 		if(session_in_par(parameter)._type == source_type_uvc)
 		{
