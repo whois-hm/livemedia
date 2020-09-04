@@ -129,6 +129,7 @@ public:
 	{
 		if(authid && authpwd)
 		{
+			printf("auth = %s / %s\n", authid, authpwd);
 			_auth = new Authenticator(authid, authpwd);
 		}
 		/*

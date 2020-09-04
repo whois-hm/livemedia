@@ -78,17 +78,18 @@ public:
 		memcpy(ptr, raw()->extended_data[0], length);
 
 	}
-	virtual uint8_t *data_alloc(const base_allocator &allocator)
+	virtual raw_media_data data_alloc()
 	{
-		uint8_t *ptr = nullptr;
+
 		int length = len();
 
 		if(length > 0)
 		{
-			ptr= (uint8_t *)allocator(length);
-			memcpy(ptr, raw()->extended_data[0], length);
+			raw_media_data d(AVMEDIA_TYPE_AUDIO, length, 0);
+			memcpy(d.take<raw_media_data::type_ptr>(), raw()->extended_data[0], length);
+			return d;
 		}
-		return ptr;
+		return raw_media_data();
 	}
 };
 

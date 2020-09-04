@@ -29,15 +29,15 @@ private:
 		AVRational fps;
 		clear(target);
 		
-		if(!attr.notfound(avattr_key::frame_video) &&
-			!attr.notfound(avattr_key::width) &&
-			!attr.notfound(avattr_key::height) &&
-			!attr.notfound(avattr_key::pixel_format)&&
-			!attr.notfound(avattr_key::fps)&&
-			!attr.notfound(avattr_key::bitrate)&&
-			!attr.notfound(avattr_key::gop)&&
-			!attr.notfound(avattr_key::max_bframe) &&
-			!attr.notfound(avattr_key::video_encoderid))
+		if(!attr.notfound(avattr::frame_video) &&
+			!attr.notfound(avattr::width) &&
+			!attr.notfound(avattr::height) &&
+			!attr.notfound(avattr::pixel_format)&&
+			!attr.notfound(avattr::fps)&&
+			!attr.notfound(avattr::bitrate)&&
+			!attr.notfound(avattr::gop)&&
+			!attr.notfound(avattr::max_bframe) &&
+			!attr.notfound(avattr::video_encoderid))
 		{
 			type = AVMEDIA_TYPE_VIDEO;
 		}
@@ -54,7 +54,7 @@ private:
 
 			if(type == AVMEDIA_TYPE_VIDEO)
 			{
-				codec = avcodec_find_encoder((enum AVCodecID)attr.get_int(avattr_key::video_encoderid));
+				codec = avcodec_find_encoder((enum AVCodecID)attr.get<avattr::avattr_type_int>(avattr::video_encoderid));
 				if(!codec)
 				{
 					break;
@@ -66,14 +66,14 @@ private:
 				}
 
 					fps.num = 1;
-					fps.den = attr.get_int(avattr_key::fps);
-					target->width = attr.get_int(avattr_key::width);
-					target->height = attr.get_int(avattr_key::height);
-					target->bit_rate = attr.get_int(avattr_key::bitrate);
+					fps.den = attr.get<avattr::avattr_type_int>(avattr::fps);
+					target->width = attr.get<avattr::avattr_type_int>(avattr::width);
+					target->height = attr.get<avattr::avattr_type_int>(avattr::height);
+					target->bit_rate = attr.get<avattr::avattr_type_int>(avattr::bitrate);
 					target->time_base = fps;
-					target->gop_size = attr.get_int(avattr_key::gop);
-					target->max_b_frames = attr.get_int(avattr_key::max_bframe);
-					target->pix_fmt = (enum AVPixelFormat)attr.get_int(avattr_key::pixel_format);
+					target->gop_size = attr.get<avattr::avattr_type_int>(avattr::gop);
+					target->max_b_frames = attr.get<avattr::avattr_type_int>(avattr::max_bframe);
+					target->pix_fmt = (enum AVPixelFormat)attr.get<avattr::avattr_type_int>(avattr::pixel_format);
 					encode = avcodec_encode_video2;
 				
 

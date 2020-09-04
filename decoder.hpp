@@ -294,25 +294,25 @@ private:
 
 				if(avcodec->type == AVMEDIA_TYPE_AUDIO)
 				{
-					if(!attr.has_frame_audio())
+					if(attr.notfound(avattr::frame_audio))
 					{
 						break;
 					}
 
-					_avcontext->channels = attr.get_int(avattr_key::channel);
-					_avcontext->sample_rate = attr.get_int(avattr_key::samplerate);
-					_avcontext->sample_fmt = (enum AVSampleFormat)attr.get_int(avattr_key::pcm_format);;
+					_avcontext->channels = attr.get<avattr::avattr_type_int>(avattr::channel);
+					_avcontext->sample_rate = attr.get<avattr::avattr_type_int>(avattr::samplerate);
+					_avcontext->sample_fmt = (enum AVSampleFormat)attr.get<avattr::avattr_type_int>(avattr::pcm_format);;
 				}
 				else if(avcodec->type == AVMEDIA_TYPE_VIDEO)
 				{
-					if(!attr.has_frame_video())
+					if(attr.notfound(avattr::frame_video))
 					{
 						break;
 					}
 
-					_avcontext->width = attr.get_int(avattr_key::width);
-					_avcontext->height = attr.get_int(avattr_key::height);
-					_avcontext->pix_fmt = (enum AVPixelFormat)attr.get_int(avattr_key::pixel_format);
+					_avcontext->width = attr.get<avattr::avattr_type_int>(avattr::width);
+					_avcontext->height = attr.get<avattr::avattr_type_int>(avattr::height);
+					_avcontext->pix_fmt = (enum AVPixelFormat)attr.get<avattr::avattr_type_int>(avattr::pixel_format);
 					_avcontext->bit_rate = 400000;
 				}
 			}

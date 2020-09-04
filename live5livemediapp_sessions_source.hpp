@@ -1,4 +1,4 @@
-#pragma once__
+#pragma once
 
 
 class live5livemediapp_serversession_source
@@ -194,7 +194,7 @@ private:
 
 		if(_enc && _uvc)
 		{
-			return (enum AVCodecID)_attr.get_int(avattr_key::video_encoderid);
+			return (enum AVCodecID)_attr.get<avattr::avattr_type_int>(avattr::video_encoderid);
 		}
 		return AV_CODEC_ID_NONE;
 	}

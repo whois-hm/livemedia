@@ -61,27 +61,27 @@ private:
 	bool attr_hasvideo_stream()
 	{
 		return (	/*encode parameters check*/
-		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr_key::frame_video) &&
-		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr_key::width) &&
-		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr_key::height) &&
-		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr_key::pixel_format)&&
-		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr_key::fps)&&
-		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr_key::bitrate)&&
-		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr_key::gop)&&
-		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr_key::max_bframe) &&
-		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr_key::video_encoderid));
+		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr::frame_video) &&
+		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr::width) &&
+		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr::height) &&
+		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr::pixel_format)&&
+		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr::fps)&&
+		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr::bitrate)&&
+		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr::gop)&&
+		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr::max_bframe) &&
+		!_attr[AVMEDIA_TYPE_VIDEO].notfound(avattr::video_encoderid));
 
 	}
 	bool attr_hasaudio_stream()
 	{
 	
 		return (	/*encode parameters check*/
-		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr_key::frame_audio) &&
-		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr_key::channel) &&
-		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr_key::samplerate) &&
-		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr_key::pcm_format)&&
-		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr_key::bitrate)&&
-		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr_key::audio_encoderid));
+		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr::frame_audio) &&
+		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr::channel) &&
+		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr::samplerate) &&
+		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr::pcm_format)&&
+		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr::bitrate)&&
+		!_attr[AVMEDIA_TYPE_AUDIO].notfound(avattr::audio_encoderid));
 	}
 	int make_stream(AVStream *&stm)
 	{
@@ -101,24 +101,24 @@ private:
 			return 0;
 		}
 		avattr copy ;
-		copy.set(avattr_key::frame_video,
-				_attr[AVMEDIA_TYPE_VIDEO].get(avattr_key::frame_video));
-		copy.set(avattr_key::width,
-				_attr[AVMEDIA_TYPE_VIDEO].get(avattr_key::width));
-		copy.set(avattr_key::height,
-				_attr[AVMEDIA_TYPE_VIDEO].get(avattr_key::height));
-		copy.set(avattr_key::pixel_format, 
-				_attr[AVMEDIA_TYPE_VIDEO].get(avattr_key::pixel_format));
-		copy.set(avattr_key::fps,
-				_attr[AVMEDIA_TYPE_VIDEO].get(avattr_key::fps));
-		copy.set(avattr_key::bitrate,
-				_attr[AVMEDIA_TYPE_VIDEO].get(avattr_key::bitrate));
-		copy.set(avattr_key::gop,
-				_attr[AVMEDIA_TYPE_VIDEO].get(avattr_key::gop));
-		copy.set(avattr_key::max_bframe,
-				_attr[AVMEDIA_TYPE_VIDEO].get(avattr_key::max_bframe));
-		copy.set(avattr_key::video_encoderid,
-				_attr[AVMEDIA_TYPE_VIDEO].get(avattr_key::video_encoderid));
+		copy.set(avattr::frame_video,
+				_attr[AVMEDIA_TYPE_VIDEO].get<avattr::avattr_types>(avattr::frame_video));
+		copy.set(avattr::width,
+				_attr[AVMEDIA_TYPE_VIDEO].get<avattr::avattr_types>(avattr::width));
+		copy.set(avattr::height,
+				_attr[AVMEDIA_TYPE_VIDEO].get<avattr::avattr_types>(avattr::height));
+		copy.set(avattr::pixel_format,
+				_attr[AVMEDIA_TYPE_VIDEO].get<avattr::avattr_types>(avattr::pixel_format));
+		copy.set(avattr::fps,
+				_attr[AVMEDIA_TYPE_VIDEO].get<avattr::avattr_types>(avattr::fps));
+		copy.set(avattr::bitrate,
+				_attr[AVMEDIA_TYPE_VIDEO].get<avattr::avattr_types>(avattr::bitrate));
+		copy.set(avattr::gop,
+				_attr[AVMEDIA_TYPE_VIDEO].get<avattr::avattr_types>(avattr::gop));
+		copy.set(avattr::max_bframe,
+				_attr[AVMEDIA_TYPE_VIDEO].get<avattr::avattr_types>(avattr::max_bframe));
+		copy.set(avattr::video_encoderid,
+				_attr[AVMEDIA_TYPE_VIDEO].get<avattr::avattr_types>(avattr::video_encoderid));
 
 		/*
 			current no open test
@@ -148,16 +148,16 @@ private:
 			return 0;
 		}
 		avattr copy ;
-		copy.set(avattr_key::channel,
-				_attr[AVMEDIA_TYPE_AUDIO].get(avattr_key::channel));
-		copy.set(avattr_key::samplerate,
-				_attr[AVMEDIA_TYPE_AUDIO].get(avattr_key::samplerate));
-		copy.set(avattr_key::pcm_format, 
-				_attr[AVMEDIA_TYPE_AUDIO].get(avattr_key::pcm_format));
-		copy.set(avattr_key::bitrate,
-				_attr[AVMEDIA_TYPE_AUDIO].get(avattr_key::bitrate));
-		copy.set(avattr_key::audio_encoderid,
-				_attr[AVMEDIA_TYPE_AUDIO].get(avattr_key::audio_encoderid));
+		copy.set(avattr::channel,
+				_attr[AVMEDIA_TYPE_AUDIO].get<avattr::avattr_types>(avattr::channel));
+		copy.set(avattr::samplerate,
+				_attr[AVMEDIA_TYPE_AUDIO].get<avattr::avattr_types>(avattr::samplerate));
+		copy.set(avattr::pcm_format,
+				_attr[AVMEDIA_TYPE_AUDIO].get<avattr::avattr_types>(avattr::pcm_format));
+		copy.set(avattr::bitrate,
+				_attr[AVMEDIA_TYPE_AUDIO].get<avattr::avattr_types>(avattr::bitrate));
+		copy.set(avattr::audio_encoderid,
+				_attr[AVMEDIA_TYPE_AUDIO].get<avattr::avattr_types>(avattr::audio_encoderid));
 		/*
 			current no open test
 		*/

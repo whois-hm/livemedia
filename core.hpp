@@ -23,6 +23,7 @@ extern "C"
 #include <libavutil/avutil.h>
 #include <libavutil/mathematics.h>
 #include <libavutil/error.h>
+#include <libavutil/base64.h>
 #include <libavutil/time.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/samplefmt.h>
@@ -63,6 +64,7 @@ extern "C"
 #include <thread>
 #include <chrono>
 #include <map>
+#include <memory>
 #include <tuple>
 #include <mutex>
 #include <atomic>
@@ -71,6 +73,8 @@ extern "C"
 #include <fstream>
 #include <iostream>
 #include <functional>
+#include <sstream>
+#include <string>
 
 /*
  	 livemedia main
@@ -79,22 +83,23 @@ extern "C"
 #include "utils.hpp"
 #include "filter.hpp"
 #include "dlog.hpp"
+#include "base64.hpp"
 #include "livemedia++.hpp"
 #include "wthread.hpp"
 #include "busyscheduler.hpp"
 #include "avattr.hpp"
 #include "media_data.hpp"
 #include "avpacket_class.hpp"
-#include "mediacontainer.hpp"
-#include "avpacket_bsf.hpp"
-#include "avframe_class.hpp"
 #include "pixel.hpp"
 #include "pcm.hpp"
+#include "avframe_class.hpp"
 #include "pixelframe.hpp"
 #include "pcmframe.hpp"
+#include "swxcontext_class.hpp"
 #include "decoder.hpp"
 #include "encoder.hpp"
-#include "swxcontext_class.hpp"
+#include "mediacontainer.hpp"
+#include "avpacket_bsf.hpp"
 #include "mediacontainer_record.hpp"
 #include "pixelutils.hpp"
 #include "framescheduler.hpp"

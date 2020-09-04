@@ -1,5 +1,43 @@
 #pragma once
 
+template <typename T>
+struct _delete_default
+{
+	void operator()(T *ptr)
+	{
+		delete ptr;
+	}
+};
+template<typename T>
+struct _delete_array
+{
+	void operator() (T* ptr)
+	{
+		delete[] ptr;
+	}
+};
+template<typename T>
+struct _delete_ref
+{
+	void operator()(T *ptr)
+	{ }
+};
+struct _delete_thread
+{
+	void operator()(std::thread *ptr)
+	{
+		ptr->join();
+		delete ptr;
+	}
+};
+struct _delete_file
+{
+	void operator()(FILE *ptr)
+	{
+		fclose(ptr);
+	}
+};
+
 typedef std::tuple
 		<
 		int,/*hour*/
@@ -70,20 +108,18 @@ typedef std::lock_guard<std::mutex> autolock;
 
 
 inline
-bool contain_string(char const *str,
-		char const *findstr)
+bool contain_string(const std::string &str,
+		const std::string &findstr)
 /*
  	 find character's from str
  */
 {
-	if(!str ||
-			!findstr)
+	if(str.empty() ||
+			findstr.empty())
 	{
 		return false;
 	}
-	std::string dump(str);
-
-	return dump.find(findstr) != std::string::npos;
+	return str.find(findstr) != std::string::npos;
 }
 
 inline
@@ -297,7 +333,13 @@ class memio
 		}
 	}
 public:
-	memio() : _bank(nullptr), _index(0), _max(0){}
+	memio(unsigned size = 0) : _bank(nullptr), _index(0), _max(0)
+	{
+		if(size)
+		{
+			realloc(size);
+		}
+	}
 	virtual ~memio()
 	{
 		if(_bank)

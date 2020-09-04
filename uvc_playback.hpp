@@ -36,15 +36,15 @@ class uvc_playback :
 		{
 			fn_close(nullptr);
 			avattr attr;
-			attr.set(avattr_key::frame_video, avattr_key::frame_video, 0, 0.0);
-			attr.set(avattr_key::width, avattr_key::width, p->open.width, 0.0);
-			attr.set(avattr_key::height, avattr_key::height, p->open.height, 0.0);
-			attr.set(avattr_key::pixel_format, avattr_key::pixel_format, (int)p->open.fmt, 0.0);
-			attr.set(avattr_key::fps, avattr_key::fps, p->open.fps, 0.0);
-			attr.set(avattr_key::bitrate, avattr_key::bitrate, p->open.bitrate, 0.0);
-			attr.set(avattr_key::gop, avattr_key::gop, p->open.gop, 0.0);
-			attr.set(avattr_key::max_bframe, avattr_key::max_bframe, p->open.bframe, 0.0);
-			attr.set(avattr_key::video_encoderid, avattr_key::video_encoderid, (int)p->open.cid, 0.0);
+			attr.set(avattr::frame_video, avattr::frame_video, 0, 0.0);
+			attr.set(avattr::width, avattr::width, p->open.width, 0.0);
+			attr.set(avattr::height, avattr::height, p->open.height, 0.0);
+			attr.set(avattr::pixel_format, avattr::pixel_format, (int)p->open.fmt, 0.0);
+			attr.set(avattr::fps, avattr::fps, p->open.fps, 0.0);
+			attr.set(avattr::bitrate, avattr::bitrate, p->open.bitrate, 0.0);
+			attr.set(avattr::gop, avattr::gop, p->open.gop, 0.0);
+			attr.set(avattr::max_bframe, avattr::max_bframe, p->open.bframe, 0.0);
+			attr.set(avattr::video_encoderid, avattr::video_encoderid, (int)p->open.cid, 0.0);
 			_attr = attr;
 			_rec = new mediacontainer_record(_attr,
 					avattr(),/*no audio source*/
@@ -114,7 +114,7 @@ public:
 		_recthread(wthread<recording>(10, sizeof(recording::par), "uvc rec thread")),
 		_pixelfilter(pixelframe_filter(this))
 	{
-		DECLARE_THROW(attr.notfound(avattr_key::frame_video), "uvc playback can't found video frame");
+		DECLARE_THROW(attr.notfound(avattr::frame_video), "uvc playback can't found video frame");
 		_recthread.start(INFINITE);
 		_uvc = new uvc(name);
 		pause();
@@ -166,25 +166,34 @@ public:
 		_recthread.sendto_wait(&par, sizeof(par), INFINITE);
 		_pixelfilter.enable();
 	}
-	void pause()
+	bool pause()
 	{
 		if(_lock.try_lock())
 		{
 			_uvc->stop();
 		}
+		return true;
 	}
-	void resume(bool closing = false)
+
+	bool isplaying()
+	{
+		return true;
+	}
+
+	bool resume(bool closing = false)
 	{
 		_lock.unlock();
+		return true;
 	}
-	void seek(double incr)
+	bool seek(double incr)
 	{
 		/*can't seek camera*/
+		return false;
 	}
 
 	bool has(avattr::avattr_type_string &&key)
 	{
-		if(key == avattr_key::frame_video)
+		if(key == avattr::frame_video)
 		{
 			return true;
 		}
@@ -220,7 +229,7 @@ public:
 				res = -1;
 			}
 
-			if(!output.can_take())
+			if(!output)
 			{
 
 				/*

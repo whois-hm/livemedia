@@ -23,37 +23,35 @@ public:
 		}
 		decoder dec(con.find_stream(AVMEDIA_TYPE_VIDEO)->codecpar);
 
-		while(!can_take())
+		while(!(*this))
 		{
 			avpacket_class pkt;
 			if(!con.read_packet(AVMEDIA_TYPE_VIDEO, pkt))
 			{
 				break;
 			}
-			printf("readpkt \n");
 			dec(pkt, [&](avpacket_class &packet,
 					avframe_class & frm, void *ptr)->void{
 				pixelframe pixfrm(*frm.raw());
 				pixfrm >> *this;
-				printf("ok!!!!!\n");
 			});
 		}
 
-		return can_take();
+		return (*this);
 	}
 	bool convert(int width, int height, enum AVPixelFormat fmt)
 	{
-		if(!can_take())
+		if(!(*this))
 		{
 			return false;
 		}
 		pixelframe pixfrm(*this);
 
 		avattr attr;
-		attr.set(avattr_key::frame_video, avattr_key::frame_video, 0, 0.0);
-		attr.set(avattr_key::width, avattr_key::width, width, 0.0);
-		attr.set(avattr_key::height, avattr_key::height, height, 0.0);
-		attr.set(avattr_key::pixel_format, avattr_key::pixel_format, (int)fmt, 0.0);
+		attr.set(avattr::frame_video, avattr::frame_video, 0, 0.0);
+		attr.set(avattr::width, avattr::width, width, 0.0);
+		attr.set(avattr::height, avattr::height, height, 0.0);
+		attr.set(avattr::pixel_format, avattr::pixel_format, (int)fmt, 0.0);
 
 		swxcontext_class (pixfrm,
 				attr);

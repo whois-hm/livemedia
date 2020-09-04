@@ -24,7 +24,7 @@ public:
 	pixelframe(pixel &rhs) :
 		avframe_class_type<pixel>()
 	{
-		if(rhs.can_take())
+		if(rhs)
 		{
 
 			raw()->width = rhs.width();
@@ -34,7 +34,7 @@ public:
 
 			av_image_fill_arrays(raw()->data,
 					raw()->linesize,
-					(uint8_t *)rhs.read(),
+					rhs.take<uint8_t *>(),
 					rhs.format(),
 					rhs.width(),
 					rhs.height(),
@@ -138,27 +138,27 @@ public:
 							raw()->height,
 							1) ;
 	}
-	virtual uint8_t *data_alloc(const base_allocator &allocator)
+	virtual raw_media_data data_alloc()
 	{
 
-		uint8_t *ptr = nullptr;
 		int length = len();
 
 		if(length > 0)
 		{
-			ptr= (uint8_t *)allocator(length);
-			av_image_copy_to_buffer(ptr,
-					length,
-								(uint8_t **)raw()->data,
-								raw()->linesize,
-								(enum AVPixelFormat)raw()->format,
-								raw()->width,
-								raw()->height,
-								1) ;
-		}
-		return ptr;
-	}
+			raw_media_data d(AVMEDIA_TYPE_VIDEO, length, 0.0);
 
+			av_image_copy_to_buffer(d.take<raw_media_data::type_ptr>(),
+					length,
+					(uint8_t **)raw()->data,
+					raw()->linesize,
+					(enum AVPixelFormat)raw()->format,
+					raw()->width,
+					raw()->height,
+					1) ;
+			return d;
+		}
+		return raw_media_data();
+	}
 };
 
 class pixelframe_presentationtime : public pixelframe

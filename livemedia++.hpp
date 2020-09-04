@@ -418,7 +418,7 @@ public:
 		}
 		return false;
 	}
-	const dlog &log()
+	dlog &log()
 	{
 		return _dlog;
 	}

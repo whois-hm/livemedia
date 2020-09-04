@@ -101,6 +101,7 @@ public:
 			 parameter._reclamationSeconds),
 			 _session_parameters(parameter)
 	{
+
 		DECLARE_THROW(fServerSocket == -1, "can't use socket port");
 
 		if(!_session_parameters._authentication_id.empty() &&

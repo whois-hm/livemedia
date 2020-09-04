@@ -9,10 +9,10 @@ class swxcontext_class final/*all function has in this class...........*/
 			const avattr &out_attr)
 	{
 
-		if(out_attr.notfound(avattr_key::frame_video) ||
-				out_attr.notfound(avattr_key::width) ||
-				out_attr.notfound(avattr_key::height) ||
-				out_attr.notfound(avattr_key::pixel_format))
+		if(out_attr.notfound(avattr::frame_video) ||
+				out_attr.notfound(avattr::width) ||
+				out_attr.notfound(avattr::height) ||
+				out_attr.notfound(avattr::pixel_format))
 		{
 			/*
 			 	 out attribute has no spec video
@@ -21,9 +21,9 @@ class swxcontext_class final/*all function has in this class...........*/
 		}
 		int dump[3][2] =
 		{
-				{frm.raw()->width, out_attr.get_int(avattr_key::width)},
-				{frm.raw()->height, out_attr.get_int(avattr_key::height)},
-				{frm.raw()->format, out_attr.get_int(avattr_key::pixel_format)},
+				{frm.raw()->width, out_attr.get<avattr::avattr_type_int>(avattr::width)},
+				{frm.raw()->height, out_attr.get<avattr::avattr_type_int>(avattr::height)},
+				{frm.raw()->format, out_attr.get<avattr::avattr_type_int>(avattr::pixel_format)},
 		};
 		if(dump[0][0] == dump[0][1] &&
 				dump[1][0] ==dump[1][1] &&
@@ -45,10 +45,10 @@ class swxcontext_class final/*all function has in this class...........*/
 	bool paramter_test(pcmframe &frm,
 			const avattr &out_attr)
 	{
-		if(out_attr.notfound(avattr_key::frame_audio) ||
-				out_attr.notfound(avattr_key::channel) ||
-				out_attr.notfound(avattr_key::samplerate) ||
-				out_attr.notfound(avattr_key::pcm_format))
+		if(out_attr.notfound(avattr::frame_audio) ||
+				out_attr.notfound(avattr::channel) ||
+				out_attr.notfound(avattr::samplerate) ||
+				out_attr.notfound(avattr::pcm_format))
 		{
 			/*
 			 	 out attribute has no spec audio
@@ -58,9 +58,9 @@ class swxcontext_class final/*all function has in this class...........*/
 
 		int dump[3][2] =
 		{
-				{frm.raw()->channels, out_attr.get_int(avattr_key::channel)},
-				{frm.raw()->sample_rate, out_attr.get_int(avattr_key::samplerate)},
-				{frm.raw()->format, out_attr.get_int(avattr_key::pcm_format)},
+				{frm.raw()->channels, out_attr.get<avattr::avattr_type_int>(avattr::channel)},
+				{frm.raw()->sample_rate, out_attr.get<avattr::avattr_type_int>(avattr::samplerate)},
+				{frm.raw()->format, out_attr.get<avattr::avattr_type_int>(avattr::pcm_format)},
 		};
 		if(dump[0][0] == dump[0][1] &&
 				dump[1][0] ==dump[1][1] &&

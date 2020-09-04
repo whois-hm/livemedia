@@ -340,7 +340,7 @@ class rtsp_playback :
 
 			autolock a(_framelock);
 			*_framebuffer >> (d);
-			return d.can_take() ? 1 : 0;
+			return d ? 1 : 0;
 		}
 		int get_frame(pcm_require &d)
 		{
@@ -354,7 +354,7 @@ class rtsp_playback :
 
 			autolock a(_framelock);
 			*_framebuffer >> (d);
-			return d.first.can_take() ? 1 : 0;
+			return d.first ? 1 : 0;
 		}
 	};
 
@@ -383,10 +383,10 @@ private:
 		if(str_type == "video" &&
 				str_codec == "H264")
 		{
-			subsession_attr.set(avattr_key::frame_video, "video subsession", 0,0);
-			subsession_attr.set(avattr_key::width, "video subsession width", (int)subsession.videoWidth(),0.0);
-			subsession_attr.set(avattr_key::height, "video subsession height", (int)subsession.videoHeight(),0.0);
-			subsession_attr.set(avattr_key::pixel_format, "video subsession format", AV_PIX_FMT_YUV420P,0.0);
+			subsession_attr.set(avattr::frame_video, "video subsession", 0,0);
+			subsession_attr.set(avattr::width, "video subsession width", (int)subsession.videoWidth(),0.0);
+			subsession_attr.set(avattr::height, "video subsession height", (int)subsession.videoHeight(),0.0);
+			subsession_attr.set(avattr::pixel_format, "video subsession format", AV_PIX_FMT_YUV420P,0.0);
 
 			return std::pair<enum AVMediaType, enum AVCodecID>(AVMEDIA_TYPE_VIDEO, AV_CODEC_ID_H264);
 		}
@@ -394,10 +394,10 @@ private:
 		{
 			if(str_codec == "MPA")
 			{
-				subsession_attr.set(avattr_key::frame_audio, "audio subsession", 0,0);
-				subsession_attr.set(avattr_key::channel, "audio subsession channel", (int)subsession.numChannels(),0.0);
-				subsession_attr.set(avattr_key::samplerate, "audio subsession samplerate", (int)subsession.rtpTimestampFrequency(),0.0);
-				subsession_attr.set(avattr_key::pcm_format, "audio subsession format", AV_SAMPLE_FMT_S16,0.0);
+				subsession_attr.set(avattr::frame_audio, "audio subsession", 0,0);
+				subsession_attr.set(avattr::channel, "audio subsession channel", (int)subsession.numChannels(),0.0);
+				subsession_attr.set(avattr::samplerate, "audio subsession samplerate", (int)subsession.rtpTimestampFrequency(),0.0);
+				subsession_attr.set(avattr::pcm_format, "audio subsession format", AV_SAMPLE_FMT_S16,0.0);
 				return std::pair<enum AVMediaType, enum AVCodecID>(AVMEDIA_TYPE_AUDIO, AV_CODEC_ID_MP3);
 			}
 			if(str_codec == "MPEG4-GENERIC")
@@ -406,10 +406,10 @@ private:
 				if(!mode.empty() &&
 						mode == "aac-hbr")
 				{
-					subsession_attr.set(avattr_key::frame_audio, "audio subsession", 0,0);
-					subsession_attr.set(avattr_key::channel, "audio subsession channel", (int)subsession.numChannels(),0.0);
-					subsession_attr.set(avattr_key::samplerate, "audio subsession samplerate", (int)subsession.rtpTimestampFrequency(),0.0);
-					subsession_attr.set(avattr_key::pcm_format, "audio subsession format", AV_SAMPLE_FMT_S16,0.0);
+					subsession_attr.set(avattr::frame_audio, "audio subsession", 0,0);
+					subsession_attr.set(avattr::channel, "audio subsession channel", (int)subsession.numChannels(),0.0);
+					subsession_attr.set(avattr::samplerate, "audio subsession samplerate", (int)subsession.rtpTimestampFrequency(),0.0);
+					subsession_attr.set(avattr::pcm_format, "audio subsession format", AV_SAMPLE_FMT_S16,0.0);
 					return std::pair<enum AVMediaType, enum AVCodecID>(AVMEDIA_TYPE_AUDIO, AV_CODEC_ID_AAC);
 				}
 			}
@@ -470,13 +470,13 @@ private:
 			return false;
 		}
 		if(value.first == AVMEDIA_TYPE_VIDEO &&
-				!_attr.has_frame_video())
+				_attr.notfound(avattr::frame_video))
 		{
 			printf("setup session video user ignore\n");
 			return false;
 		}
 		if(value.first == AVMEDIA_TYPE_AUDIO &&
-				!_attr.has_frame_audio())
+				_attr.notfound(avattr::frame_audio))
 		{
 			printf("setup session audio user ignore\n");
 			return false;
@@ -644,7 +644,7 @@ public:
 	{
 
 	}
-	virtual void pause()
+	virtual bool pause()
 	{
 		if(_state == rtsp_playback_state_open)
 		{
@@ -658,14 +658,15 @@ public:
 				_scheduler->trigger(live5scheduler_rtsp_playback_startpause);
 			}
 		}
-		else return;
+		else return false;
 
 		for(auto &it : _stremers.second)
 		{
 			it->pause_lock(true);
 		}
+		return true;
 	}
-	virtual void resume(bool closing = false)
+	virtual bool resume(bool closing = false)
 	{
 		struct resume_table
 		{
@@ -718,10 +719,19 @@ public:
 			}
 		}
 		_state = what.next;
+		return true;
 	}
-	virtual void seek(double incr)
+	virtual bool seek(double incr)
 	{
-
+		return false;
+	}
+	bool isplaying()
+	{
+		if(_state == rtsp_playback_state_run)
+		{
+			return true;
+		}
+		return false;
 	}
 	virtual bool has(avattr::avattr_type_string &&key)
 	{
@@ -733,11 +743,11 @@ public:
 
 		if(!bfound)
 		{
-			if(key == avattr_key::frame_video)
+			if(key == avattr::frame_video)
 			{
 				type = AVMEDIA_TYPE_VIDEO;
 			}
-			if(key == avattr_key::frame_audio)
+			if(key == avattr::frame_audio)
 			{
 				type = AVMEDIA_TYPE_AUDIO;
 			}
@@ -752,12 +762,12 @@ public:
 	}
 	virtual enum AVMediaType get_master_clock()
 	{
-		if(has(avattr_key::frame_audio))
+		if(has(avattr::frame_audio))
 		{
 			return AVMEDIA_TYPE_AUDIO;
 		}
 
-		if(has(avattr_key::frame_video))
+		if(has(avattr::frame_video))
 		{
 			return AVMEDIA_TYPE_VIDEO;
 		}
@@ -773,6 +783,10 @@ public:
 				_state = rtsp_playback_state_run;
 				_scheduler->trigger(live5scheduler_rtsp_playback_startplay);
 			}
+		}
+		else
+		{
+			resume();
 		}
 	}
         virtual duration_div duration()

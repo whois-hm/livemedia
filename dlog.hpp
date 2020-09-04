@@ -1,6 +1,79 @@
 #pragma once
 class dlog
 {
+	class logout :
+			public filter<std::string , dlog>
+	{
+		friend class dlog;
+		std::list<std::string > _filters;
+		bool in_the_filter(std::string &str) const
+		{
+			if(_filters.size() <= 0)
+			{
+				return true;
+			}
+			for(auto &it : _filters)
+			{
+				if(it == str)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		public:
+		logout(dlog *d) : filter<std::string, dlog>(d){}
+			virtual ~logout(){}
+		void add(std::string str)
+		{
+			_filters.push_back(str);
+		}
+		void sub(std::string str)
+		{
+			_filters.erase(std::remove_if(_filters.begin(), _filters.end(),
+								[&](std::string  &instr)->bool{
+								if(instr == std::string(str))
+								{
+									return true;
+								}
+								return false;
+							}
+						));
+		}
+		void clear()
+		{
+			_filters.clear();
+		}
+
+		virtual void operator >>(std::string &pf)
+		{
+			int total_size = pf.size();
+
+			if(!in_the_filter(pf))
+			{
+				return;
+			}
+			if(ptr()->_console_write)
+			{
+				printf("%s", pf.c_str());
+			}
+			if(ptr()->_file)
+			{
+				fwrite(pf.c_str(), sizeof(char), total_size, ptr()->_file.get());
+			}
+
+			if(ptr()->_client_sock != -1)
+			{
+				sendto(ptr()->_client_sock,
+					pf.c_str(),
+					total_size,
+					MSG_DONTWAIT | MSG_NOSIGNAL,
+					(struct sockaddr *)&ptr()->_serveraddr,
+					sizeof(ptr()->_serveraddr));
+			}
+		}
+	};
 public:
 	enum level
 	{
@@ -8,13 +81,19 @@ public:
 		warnning,
 		critical
 	};
-	dlog() : _server_sock(-1),
+	dlog(const dlog &d) = delete;
+	dlog(dlog &&d) = delete;
+	dlog &operator()(const dlog &d) = delete;
+	dlog &operator()(dlog &&d) = delete;
+	dlog() :
+		_out(this),
+		_server_sock(-1),
 		_client_sock(-1),
-		_file(nullptr),
+		_file(),
 		_console_write(false),
 		_level(normal),
 		_out_buffer_size(0),
-		_serverthread(nullptr)
+		_serverthread()
 	{
 
 		_prefix.clear();
@@ -38,9 +117,15 @@ public:
 		prefix_uninstall();
 		outbuffer_increase(0);
 	}
-
+	void log_enable()
+	{
+		_out.enable();
+	}
+	void log_disable()
+	{
+		_out.disable();
+	}
 	
-
 	void udp_receiver_server_uninstall()
 	{
 		if(_pipe[1] != -1)
@@ -48,12 +133,8 @@ public:
 			char d = 1;
 			write(_pipe[1], &d, 1);
 		}
-		if(_serverthread)
-		{
-			_serverthread->join();
-			delete _serverthread;
-			_serverthread = nullptr;
-		}
+		_serverthread.reset();
+
 		if(_pipe[1] != -1)
 		{
 			close(_pipe[1]);
@@ -108,8 +189,9 @@ public:
 
 		udp_receiver_server_uninstall();		
 		
+		pipe(_pipe);
 		_server_sock = tempsock;
-		_serverthread = new std::thread([&]()->void{
+		_serverthread.reset(new std::thread([&]()->void{
 				fd_signal_detector d;
 				while(1)
 				{
@@ -157,7 +239,7 @@ public:
 				}
 
 				
-			});
+			}), _delete_thread());
 		return true;
 	}
 	void udp_sender_clinet_uninstall()
@@ -169,11 +251,11 @@ public:
 			_client_sock = -1;
 		}		
 	}
-	bool udp_sender_client_install(char const *serverip, int serverport)
+	bool udp_sender_client_install(std::string serverip, int serverport)
 	{
 		int tempsock = -1;
 		
-		if(!serverip || serverport < 0)
+		if(serverip.size() <= 0 || serverport < 0)
 		{
 			return false;
 		}
@@ -184,7 +266,7 @@ public:
 		}
 		memset(&_serveraddr, 0, sizeof(_serveraddr));
 		_serveraddr.sin_family = AF_INET;
-		_serveraddr.sin_addr.s_addr = inet_addr(serverip);
+		_serveraddr.sin_addr.s_addr = inet_addr(serverip.c_str());
 		_serveraddr.sin_port = htons(serverport);
 		
 		udp_sender_clinet_uninstall();
@@ -194,28 +276,24 @@ public:
 	}
 	void file_writer_uninstall()
 	{
-		if(_file)
-		{
-			fclose(_file);
-			_file = nullptr;
-		}
+		_file.reset();
 	}
-	bool file_writer_install(char const *file, bool boverwrite)
+	bool file_writer_install(std::string file, bool boverwrite)
 	{
 		FILE *tempfile = nullptr;
-		if(!file)
+		if(file.size() <= 0)
 		{
 			return false;
 		}
 		
-		tempfile = fopen(file, boverwrite ? "w" : "a");
+		tempfile = fopen(file.c_str(), boverwrite ? "w" : "a");
 		if(!tempfile)
 		{
 			return false;
 		}
 		file_writer_uninstall();
 
-		_file = tempfile;
+		_file.reset(tempfile, _delete_file());
 		return true;
 	}
 	void console_writer_uninstall()
@@ -248,36 +326,21 @@ public:
 			_out_buffer_size = size : 
 			_out_buffer_size = _out_buffer_size;
 	}
-	void filter_add(char const *str)
+	void filter_add(std::string &str)
 	{
-		if(str)
-		{
-			_filters.push_back(std::string(str));
-		}
+		_out.add(str);
 	}
-	void filter_sub(char const *str)
+	void filter_sub(std::string &str)
 	{
-		if(!str)
-		{
-			return;
-		}
-		_filters.erase(std::remove_if(_filters.begin(), _filters.end(),
-							[&](std::string  &instr)->bool{
-							if(instr == std::string(str))
-							{
-								return true;
-							}
-							return false;
-						}
-					));
+		_out.sub(str);
 	}
 	void filter_clear()
 	{
-		_filters.clear();
+		_out.clear();
 	}
 
 	void operator()(enum level lvl, 
-		const char *format, ...) const
+		const char *format, ...)
 	{
 		int prefix_size = 0;
 		int total_size = 0;
@@ -310,33 +373,12 @@ public:
 			va_end(s);
 		}
 		out_buffer[_out_buffer_size - 1] = 0;
-		total_size = strlen(out_buffer);
 
-		if(!in_the_filter(out_buffer))
-		{
-			return;
-		}
-		if(_console_write)
-		{
-			printf("%s", out_buffer);
-		}
-		if(_file)
-		{
-			fwrite(out_buffer, sizeof(char), total_size, _file);
-		}
-		
-		if(_client_sock != -1)
-		{
-			sendto(_client_sock, 
-				out_buffer,
-				total_size,
-				MSG_DONTWAIT | MSG_NOSIGNAL, 
-				(struct sockaddr *)&_serveraddr, 
-				sizeof(_serveraddr));
-		}		
+		_out <<(std::string(out_buffer));
+
 	}			
 	void operator()(enum level lvl, 
-		void *ptr, unsigned size) const
+		void *ptr, unsigned size)
 	{
 		if(!ptr || size <= 0)
 		{
@@ -368,7 +410,7 @@ public:
 
 		while(nTot_Line-- > 0)
 		{
-		printf("%08x  %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x  %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n",
+		dlog::operator ()(lvl, "%08x  %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x  %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n",
 		(pBuffer + nBf_Cs),   	PVH(0),		 PVH(1), 	PVH(2), 	PVH(3), 	PVH(4), 	PVH(5), 	PVH(6), 	PVH(7),
 		PVH(8), 	 PVH(9), 	PVH(10), 	PVH(11), 	PVH(12), 	PVH(13), 	PVH(14), 	PVH(15),
 
@@ -409,31 +451,16 @@ public:
 	}
 
 private:
-	bool in_the_filter(char *str) const
-	{
-		if(_filters.size() <= 0)
-		{
-			return true;
-		}
-		for(auto &it : _filters)
-		{
-			if(it == str)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
+	logout _out;
 	int _server_sock;
 	int _client_sock;
-	FILE *_file;
+	std::shared_ptr<FILE> _file;
 	bool _console_write;
 	enum level _level;
 	unsigned _out_buffer_size;
-	std::thread *_serverthread;
+	std::shared_ptr<std::thread> _serverthread;
 	std::string _prefix;
 	struct sockaddr_in _serveraddr;
 	int _pipe[2];
-	std::list<std::string > _filters;
-	
+
 };

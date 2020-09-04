@@ -83,9 +83,7 @@ private:
 	virtual void field_attr_value(_raw_media_type &t) = 0;
 	virtual void field_data_value(_raw_media_type &t)
 	{
-		int l = len();
-		uint8_t *ptr = data_alloc(t.allocator());
-		t.replace(ptr, l);
+		t = data_alloc();
 	}
 protected:
 	avframe_class_type(){}
@@ -99,7 +97,7 @@ protected:
 public:
 	virtual int len() = 0;
 	virtual void data_copy(uint8_t *ptr, int length) = 0;
-	virtual uint8_t *data_alloc(const base_allocator &allocator) = 0;
+	virtual raw_media_data data_alloc() = 0;
 	avframe_class_type &operator =
 			(const  avframe_class_type &_class)
 	{

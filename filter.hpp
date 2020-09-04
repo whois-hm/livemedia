@@ -5,14 +5,16 @@ typename T/*saving any pointer type*/
 >
 class filter
 {
-	bool _bfiltering;
-	T *_ptr;
+	bool _bfiltering;/*flag for using filter*/
+	std::shared_ptr<T> _ptr;
 public:
-	bool isenable()
+	bool isenable() const
+	/*check enable flag*/
 	{
 		return _bfiltering;
 	}
-	T *ptr(){ return _ptr; }
+	T *ptr()/*get the user ptr*/
+	{ return _ptr.get(); }
 	void enable()
 	{ _bfiltering = true; }
 	void disable()
@@ -23,8 +25,14 @@ public:
 	{ operator << (pf); }
 
 protected:
-	filter(T *ptr) : _bfiltering(false) ,_ptr(ptr){ }
-	filter() : _bfiltering(false) ,_ptr(nullptr){ }
+	filter(T *ptr) : _bfiltering(false) ,
+		_ptr(ptr, _delete_ref<T>()) { }
+	filter() : _bfiltering(false),
+		_ptr(nullptr, _delete_ref<T>()) { }
+	filter(const filter &rhs) : _bfiltering(rhs._bfiltering),
+			_ptr(rhs.ptr()){}
+	filter(filter &&rhs) : _bfiltering(rhs._bfiltering),
+			_ptr(rhs.ptr()){}
 	virtual ~filter(){}
 	virtual void operator >>(types &pf)
 	{ }

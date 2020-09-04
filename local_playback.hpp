@@ -294,10 +294,10 @@ public:
 				/*
 				 	 	 we can control 'audio' or 'video' current
 				 */
-				{_attr.has_frame_video(),
+				{!_attr.notfound(avattr::frame_video),
 						_mediacontainer.find_stream(AVMEDIA_TYPE_VIDEO),
 						"local playback video"},
-				{_attr.has_frame_audio(),
+				{!_attr.notfound(avattr::frame_audio),
 						_mediacontainer.find_stream (AVMEDIA_TYPE_AUDIO),
 						"local playback audio"},
 				{false,
@@ -354,7 +354,7 @@ public:
 	{
 
 	}
-	void pause()
+	bool pause()
 	{
 		/*
 			we manage constructor has always 'pause'
@@ -369,10 +369,11 @@ public:
 			{
 				it.second.first->lock();
 			}
-
+			return true;
 		}		
+		return false;
 	}
-	void resume(bool closing = false)
+	bool resume(bool closing = false)
 	{
 		if(_state == local_playback_state_pause)
 		{
@@ -383,9 +384,9 @@ public:
 			{
 				it.second.first->unlock();
 			}
-
+			return true;
 		}
-		
+		return false;
 	}
     void resolution(int w, int h)
     {
@@ -404,13 +405,13 @@ public:
             }
 
             /*if want change resolution */
-            _attr.reset(avattr_key::width, avattr_key::width, w, (double)w);
-            _attr.reset(avattr_key::height, avattr_key::height, h, (double)w);
+            _attr.reset(avattr::width, avattr::width, w, (double)w);
+            _attr.reset(avattr::height, avattr::height, h, (double)w);
             resume();
         }
 
     }
-	void seek(double incr)
+	bool seek(double incr)
 	{
 		double master_pts;
 		enum AVMediaType master_type;
@@ -450,6 +451,7 @@ public:
 			resume();
 		}
         _framescheduler.clear_delta();
+        return true;
 	}
 
 	bool has(avattr::avattr_type_string &&key)
@@ -459,6 +461,14 @@ public:
 	void play()
 	{
 		resume();
+	}
+	bool isplaying()
+	{
+		if(_state == local_playback_state_run)
+		{
+			return true;
+		}
+		return false;
 	}
     duration_div duration()
     {
@@ -491,7 +501,7 @@ public:
         
 		_targetstreamer->unlock();
 		
-        res = output.can_take() ? 1 : 0;
+        res = output ? 1 : 0;
         if(res == 0)
         {
             std::lock_guard<std::mutex> a(_mediacontainerlock);
@@ -534,7 +544,7 @@ public:
 		}
         _targetstreamer->unlock();
 
-        res = output.first.can_take() ? 1 : 0;
+        res = output.first ? 1 : 0;
         if(res == 0)
         {
             std::lock_guard<std::mutex> a(_mediacontainerlock);

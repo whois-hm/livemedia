@@ -224,6 +224,40 @@ public:
 					seekflags);
 		}
 	}
+	pixel keyframe_thumbnail(double pts, const avattr &attr)
+	{
+		pixel pix;
+		bool hasframe = false;
+		if(!find_stream(AVMEDIA_TYPE_VIDEO))
+		{
+			return pix;
+		}
+		decoder d;
+		if(!d.opentest(find_stream(AVMEDIA_TYPE_VIDEO)->codecpar))
+		{
+			return pix;
+		}
+		seek(AVMEDIA_TYPE_VIDEO, pts, 0.0);
+
+		avpacket_class pkt;
+
+		while(read_packet(AVMEDIA_TYPE_VIDEO, pkt) && !hasframe)
+		{
+			d(pkt, [&](const avpacket_class & pkt,
+					avframe_class &frm,
+					void *puser)->void{
+						if(frm.raw()->key_frame)
+						{
+							pixelframe frame(*frm.raw());
+							swxcontext_class (frame, attr);
+							frame >> pix;
+							hasframe = true;
+						}
+				}
+			);
+		}
+		return pix;
+	}
    duration_div duration(bool &has)
 	{
       has = false;

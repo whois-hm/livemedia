@@ -12,7 +12,8 @@ public:
 	{
 		playback_inst *inst = nullptr;
 		bool res = true;
-		if(!attr.has_frame_any())
+		if(attr.notfound(avattr::frame_video) &&
+				attr.notfound(avattr::frame_audio))
 		{
 			return nullptr;
 		}
@@ -81,15 +82,16 @@ public:
 	{ if(_inst)delete _inst;_inst = nullptr;}
 	void record(char const *file = nullptr)
 	{ _inst->record(file); }
-	void pause()
-	{_inst->pause();}
-	void resume(bool closing = false)
-	{_inst->resume(closing);}
-	void seek(double incr)
-	{_inst->seek(incr);}
+	bool pause()
+	{return _inst->pause();}
+	bool resume(bool closing = false)
+	{ return _inst->resume(closing);}
+	bool seek(double incr)
+	{ return _inst->seek(incr);}
 	bool has(avattr::avattr_type_string &&key)
 	{return _inst->has(static_cast<avattr::avattr_type_string &&>(key));}
 	void play(){_inst->play();}
+	bool isplaying(){_inst->isplaying();}
 	enum AVMediaType get_master_clock(){return _inst->get_master_clock();}
     duration_div duration(){return _inst->duration();}
     void resolution(int w, int h)
