@@ -138,14 +138,14 @@ public:
 							raw()->height,
 							1) ;
 	}
-	virtual raw_media_data data_alloc()
+	virtual pixel data_alloc()
 	{
 
 		int length = len();
 
 		if(length > 0)
 		{
-			raw_media_data d(AVMEDIA_TYPE_VIDEO, length, 0.0);
+			pixel d(length);
 
 			av_image_copy_to_buffer(d.take<raw_media_data::type_ptr>(),
 					length,
@@ -157,7 +157,7 @@ public:
 					1) ;
 			return d;
 		}
-		return raw_media_data();
+		return pixel();
 	}
 };
 

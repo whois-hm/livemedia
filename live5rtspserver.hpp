@@ -118,11 +118,9 @@ public:
 		for(auto &it : parameter._sessionparameters_pairs)
 		{
 			livemediappsession = livemediapp_serversession::createnew(env, it, this);
-			printf("=================================== session name  = %s\n", livemediappsession->streamName());
 			DECLARE_THROW(!livemediappsession, "can't create livemedipp serversession..");
 			addServerMediaSession(livemediappsession);
 			char *rtspurl = rtspURL(lookupServerMediaSession(session_in_par(it)._session_name.c_str()));
-			printf("run server : %s\n", rtspurl);
 			delete [] rtspurl;
 		}
 	}

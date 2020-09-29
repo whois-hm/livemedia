@@ -108,7 +108,7 @@ private:
 				}
 				void draw_pixel( pixel &pix)	
 				{
-					if(!pix.can_take() || 
+					if(!pix ||
 						pix.width() != std::get<2>(_rect) ||
 						pix.height() != std::get<3>(_rect))
 					{
@@ -151,7 +151,7 @@ private:
 					sr.w = w;
 					sr.h = h;
 
-					unsigned char *pixel = (unsigned char *)pix.read();
+					unsigned char *pixel = pix.take<raw_media_data::type_ptr>();
 					unsigned char *yplane = pixel + y_start;
 					unsigned char *uplane = pixel + u_start;
 					unsigned char *vplane = pixel + v_start;

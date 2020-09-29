@@ -75,6 +75,8 @@ extern "C"
 #include <functional>
 #include <sstream>
 #include <string>
+#include <condition_variable>
+#include <future>
 
 /*
  	 livemedia main

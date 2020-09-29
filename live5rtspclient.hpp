@@ -117,7 +117,7 @@ public:
 			char const* rtspurl,
 			char const *authid = nullptr,
 			char const *authpwd = nullptr) :
-				::RTSPClient(env, rtspurl, 10, nullptr, 0, -1),
+				::RTSPClient(env, rtspurl, 0, nullptr, 0, -1),
 				 _scheduledtoken(nullptr),
 				 _auth(nullptr),
 				 _session(nullptr),

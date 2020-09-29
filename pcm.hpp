@@ -17,6 +17,8 @@ public:
 	 */
 	pcm() : raw_media_data(AVMEDIA_TYPE_AUDIO, 0),
 	_val(std::make_tuple(0, 0, 0, AV_SAMPLE_FMT_NONE)) { }
+	pcm(raw_media_data::type_size s) : raw_media_data(AVMEDIA_TYPE_AUDIO, s),
+	_val(std::make_tuple(0, 0, 0, AV_SAMPLE_FMT_NONE)) { }
 	pcm(const pcm &rhs) :
 		raw_media_data (dynamic_cast<const raw_media_data &>(rhs)),
 		_val(rhs._val) { }

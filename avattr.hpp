@@ -49,7 +49,7 @@ public:
 			avattr_type_double>
 	avattr_types;
 private:
-	const avattr_types &get_types(char const *key) const
+	 avattr_types get_types(char const *key) const
 	{
 		for(auto &it : _map)
 		{

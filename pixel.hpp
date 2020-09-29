@@ -12,6 +12,8 @@ public:
 
 	pixel() : raw_media_data(AVMEDIA_TYPE_VIDEO, 0),
 			_val(std::make_tuple(0, 0, AV_PIX_FMT_NONE)){}
+	pixel(raw_media_data::type_size s) : raw_media_data(AVMEDIA_TYPE_VIDEO, s),
+			_val(std::make_tuple(0, 0, AV_PIX_FMT_NONE)){}
 	pixel(const pixel &rhs) :
 		raw_media_data(dynamic_cast<const raw_media_data &>(rhs)),
 		_val(rhs._val){}

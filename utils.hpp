@@ -3,6 +3,9 @@
 template <typename T>
 struct _delete_default
 {
+	/*
+	 	 for new a
+	 */
 	void operator()(T *ptr)
 	{
 		delete ptr;
@@ -11,6 +14,9 @@ struct _delete_default
 template<typename T>
 struct _delete_array
 {
+	/*
+	 	 for new a[]
+	 */
 	void operator() (T* ptr)
 	{
 		delete[] ptr;
@@ -19,11 +25,17 @@ struct _delete_array
 template<typename T>
 struct _delete_ref
 {
+	/*
+	 	 for &
+	 */
 	void operator()(T *ptr)
 	{ }
 };
 struct _delete_thread
 {
+	/*
+	 	 for new std::thread
+	 */
 	void operator()(std::thread *ptr)
 	{
 		ptr->join();
@@ -32,6 +44,9 @@ struct _delete_thread
 };
 struct _delete_file
 {
+	/*
+	 	 for fopen
+	 */
 	void operator()(FILE *ptr)
 	{
 		fclose(ptr);
@@ -380,6 +395,9 @@ public:
 		return size;
 	}
 };
+
+
+
 
 
 struct av_type_string_map

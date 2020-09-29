@@ -374,12 +374,12 @@ public:
 
 	pixel &operator >>(pixel &pf)
 	{
-		Tclass::operator >>(pf);
-		if(pf)
+		if(!Tclass::_pixelframe.empty())
 		{
 			/*if setup pixel value,  fill the pts*/
 			pf = (Tclass::_pixelframe.front()());
 		}
+		Tclass::operator >>(pf);
 
 		return pf;
 	}

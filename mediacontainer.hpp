@@ -19,6 +19,7 @@ class mediacontainer
 			avformat_close_input(&con._context);
 		}
 		con._context = nullptr;
+
 	}
 public:
 	mediacontainer() = delete;
@@ -226,6 +227,7 @@ public:
 	}
 	pixel keyframe_thumbnail(double pts, const avattr &attr)
 	{
+		printf("qqqqqqq\n");
 		pixel pix;
 		bool hasframe = false;
 		if(!find_stream(AVMEDIA_TYPE_VIDEO))
@@ -248,6 +250,7 @@ public:
 					void *puser)->void{
 						if(frm.raw()->key_frame)
 						{
+							printf("zzzzzzzzzz\n");
 							pixelframe frame(*frm.raw());
 							swxcontext_class (frame, attr);
 							frame >> pix;

@@ -78,18 +78,18 @@ public:
 		memcpy(ptr, raw()->extended_data[0], length);
 
 	}
-	virtual raw_media_data data_alloc()
+	virtual pcm data_alloc()
 	{
 
 		int length = len();
 
 		if(length > 0)
 		{
-			raw_media_data d(AVMEDIA_TYPE_AUDIO, length, 0);
+			pcm d(length);
 			memcpy(d.take<raw_media_data::type_ptr>(), raw()->extended_data[0], length);
 			return d;
 		}
-		return raw_media_data();
+		return pcm();
 	}
 };
 

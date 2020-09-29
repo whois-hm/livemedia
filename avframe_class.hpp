@@ -84,6 +84,7 @@ private:
 	virtual void field_data_value(_raw_media_type &t)
 	{
 		t = data_alloc();
+
 	}
 protected:
 	avframe_class_type(){}
@@ -97,7 +98,7 @@ protected:
 public:
 	virtual int len() = 0;
 	virtual void data_copy(uint8_t *ptr, int length) = 0;
-	virtual raw_media_data data_alloc() = 0;
+	virtual _raw_media_type data_alloc() = 0;
 	avframe_class_type &operator =
 			(const  avframe_class_type &_class)
 	{

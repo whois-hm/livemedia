@@ -32,7 +32,7 @@ protected:
 	filter(const filter &rhs) : _bfiltering(rhs._bfiltering),
 			_ptr(rhs.ptr()){}
 	filter(filter &&rhs) : _bfiltering(rhs._bfiltering),
-			_ptr(rhs.ptr()){}
+			_ptr(rhs.ptr()){rhs._bfiltering = false; rhs._ptr = nullptr;}
 	virtual ~filter(){}
 	virtual void operator >>(types &pf)
 	{ }

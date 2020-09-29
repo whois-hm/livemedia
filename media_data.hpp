@@ -113,7 +113,6 @@ public:
 	}
 	raw_media_data &operator =  (const raw_media_data &rhs)
 	{
-
 		type_shared_ptr::reset();
 		type_shared_ptr::operator =(rhs);
 		_s = rhs._s;
