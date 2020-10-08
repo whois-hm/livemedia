@@ -765,5 +765,65 @@ protected:
 					_auth);
 		}
 	}
+public:
+	static std::string targetserver_alive(unsigned timeout, const std::string &path,
+			const std::string &authid,
+			const std::string &auth_pwd)
+	{
+		class rtsp_sdp_client :public live5rtspclient
+			{
+				std::string *_sdp;
+				semaphore *_sem;
+			public:
+				rtsp_sdp_client (UsageEnvironment& env,
+								 const report &notify,
+								 char const* rtspurl,
+									 std::string *sdp,
+									 semaphore *sem,
+								 char const *authid = nullptr,
+								 char const *authpwd = nullptr):
+					live5rtspclient(env,
+									notify,
+									rtspurl,
+									authid,
+									authpwd),_sdp(sdp), _sem(sem){ sendcommand(rtsp_option);}
+			private:
+				virtual void response_option(int code, char* str)
+				{
+
+				   if(code == 0)
+					{
+						/*get sdp*/
+						sendcommand(rtsp_describe);
+					}
+
+					delete [] str;
+				}
+				virtual void response_describe(int code, char* str)
+				{
+					/*stop*/
+					*_sdp = std::string(str);
+					SEMA_unlock(_sem);
+				}
+			};
+
+			std::string sdp;
+			semaphore sem;
+			SEMA_open(&sem, 0, 1);
+
+
+			live5scheduler<rtsp_sdp_client> *scheduler = new live5scheduler<rtsp_sdp_client>();
+			scheduler->start(true,
+					live5rtspclient::report(),
+					path.c_str(),
+					&sdp,
+					&sem,
+					authid.empty() ? nullptr : authid.c_str(),
+							auth_pwd.empty() ? nullptr : auth_pwd.c_str());
+			_dword res = SEMA_lock(&sem, timeout);
+			delete scheduler;
+			SEMA_close(&sem);
+			return sdp;
+	}
 
 };
