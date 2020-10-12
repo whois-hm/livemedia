@@ -282,6 +282,7 @@ public:
 	}
 	virtual ~livemedia_pp()
 	{
+		_dlog.color(dlog::RESET);
 		_filercontext_container.clear();
 		_namedthreads.clear();
 	}

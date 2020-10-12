@@ -1,6 +1,8 @@
 #pragma once
 class dlog
 {
+
+
 	class logout :
 			public filter<std::string , dlog>
 	{
@@ -56,7 +58,16 @@ class dlog
 			}
 			if(ptr()->_console_write)
 			{
+				if(ptr()->_color_prefix)
+				{
+					printf("%s",ptr()->_color_prefix);
+
+				}
 				printf("%s", pf.c_str());
+				if(ptr()->_color_prefix)
+				{
+					printf("\x1b[0m");
+				}
 			}
 			if(ptr()->_file)
 			{
@@ -72,9 +83,25 @@ class dlog
 					(struct sockaddr *)&ptr()->_serveraddr,
 					sizeof(ptr()->_serveraddr));
 			}
+			if(ptr()->_usrout_functor)
+			{
+				ptr()->_usrout_functor(pf);
+			}
 		}
 	};
 public:
+
+	enum color_set
+	{
+		RED,
+		GREEN,
+		YELLOW,
+		BLUE,
+		MAGENTA,
+		CYAN,
+		RESET,
+		MAX,
+	};
 	enum level
 	{
 		normal,
@@ -93,7 +120,9 @@ public:
 		_console_write(false),
 		_level(normal),
 		_out_buffer_size(0),
-		_serverthread()
+		_serverthread(),
+		_color_prefix(nullptr),
+		_usrout_functor(nullptr)
 	{
 
 		_prefix.clear();
@@ -117,6 +146,7 @@ public:
 		prefix_uninstall();
 		outbuffer_increase(0);
 	}
+
 	void log_enable()
 	{
 		_out.enable();
@@ -274,6 +304,14 @@ public:
 		_client_sock = tempsock;
 
 	}
+	void userout_writer_install(std::function<void (std::string &)> &&l)
+	{
+		_usrout_functor = l;
+	}
+	void userout_writer_uninstall()
+	{
+		_usrout_functor = nullptr;
+	}
 	void file_writer_uninstall()
 	{
 		_file.reset();
@@ -337,6 +375,28 @@ public:
 	void filter_clear()
 	{
 		_out.clear();
+	}
+	void color(dlog::color_set c)
+	{
+		char const *strcolor [dlog::MAX] =
+		{
+				"\x1b[31m",
+				"\x1b[32m",
+				"\x1b[33m",
+				"\x1b[34m",
+				"\x1b[35m",
+				"\x1b[36m",
+				"\x1b[0m"
+
+		};
+		if(c == dlog::RESET &&
+				_color_prefix != nullptr)
+		{
+			puts(strcolor[c]);
+			_color_prefix = nullptr;
+			return;
+		}
+		_color_prefix = strcolor[c];
 	}
 
 	void operator()(enum level lvl, 
@@ -462,5 +522,7 @@ private:
 	std::string _prefix;
 	struct sockaddr_in _serveraddr;
 	int _pipe[2];
+	char const *_color_prefix;
+	std::function<void (std::string &)>_usrout_functor;
 
 };

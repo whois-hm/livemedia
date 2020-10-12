@@ -214,213 +214,210 @@ private:
 	 our server media subsessions
 	 --------------------------------------------------------------------------------*/
 
-class livemediapp_servermediasubession :
-		public OnDemandServerMediaSubsession
-{
-		/*based subsession*/
-protected:
-	livemediapp_serversession &_serversession;
-	enum AVMediaType _type;/*for debug print*/
-	
-
-	livemediapp_servermediasubession(livemediapp_serversession &serversession,
-		enum AVMediaType type,
-		Boolean bresuse) :
-		OnDemandServerMediaSubsession(serversession.envir(), bresuse),
-			_serversession(serversession),
-			_type(type) {}
-	virtual ~livemediapp_servermediasubession()
+	class livemediapp_servermediasubession :
+			public OnDemandServerMediaSubsession
 	{
-
-	}
-	virtual void closeStreamSource(FramedSource *inputSource) = 0;	
-	virtual FramedSource* createNewStreamSource(unsigned clientSessionId,
-					      unsigned& estBitrate) = 0;
-	virtual RTPSink* createNewRTPSink(Groupsock* rtpGroupsock,
-				    unsigned char rtpPayloadTypeIfDynamic,
-				    FramedSource* inputSource) = 0;
-	  virtual void startStream(unsigned clientSessionId, void* streamToken,
-				   TaskFunc* rtcpRRHandler,
-				   void* rtcpRRHandlerClientData,
-				   unsigned short& rtpSeqNum,
-	                           unsigned& rtpTimestamp,
-				   ServerRequestAlternativeByteHandler* serverRequestAlternativeByteHandler,
-	                           void* serverRequestAlternativeByteHandlerClientData)
-	  {
-		  OnDemandServerMediaSubsession::startStream(clientSessionId,
-				  streamToken,
-				  rtcpRRHandler,
-				  rtcpRRHandlerClientData,
-				  rtpSeqNum,
-				  rtpTimestamp,
-				  serverRequestAlternativeByteHandler,
-				  serverRequestAlternativeByteHandlerClientData);
-	  }
-	virtual void pauseStream(unsigned clientSessionId, void *streamToken)
-  	{
-  		/*
-	  		we have nothing to do. because the sink has no request source's data.	  		
-	  	*/
-
-  		OnDemandServerMediaSubsession::pauseStream(clientSessionId, streamToken);
-  	}
-	virtual void seekStreamSource(FramedSource* inputSource, double& seekNPT, double streamDuration, u_int64_t& numBytes)
-	{
+			/*based subsession*/
+	protected:
+		livemediapp_serversession &_serversession;
+		enum AVMediaType _type;/*for debug print*/
 
 
-			/*
-				OnDemandServerMediaSubsession has no imple
-			*/
-		OnDemandServerMediaSubsession ::seekStreamSource (inputSource, seekNPT, streamDuration, numBytes);
-		mediafiltered_source *_filtersource = dynamic_cast<mediafiltered_source *>(inputSource);
-		if(_filtersource)/*reference for client id*/
+		livemediapp_servermediasubession(livemediapp_serversession &serversession,
+			enum AVMediaType type,
+			Boolean bresuse) :
+			OnDemandServerMediaSubsession(serversession.envir(), bresuse),
+				_serversession(serversession),
+				_type(type) {}
+		virtual ~livemediapp_servermediasubession()
 		{
-			_filtersource->seekFrame(seekNPT, streamDuration, numBytes);
+	
+		}
+		virtual void closeStreamSource(FramedSource *inputSource) = 0;
+		virtual FramedSource* createNewStreamSource(unsigned clientSessionId,
+							  unsigned& estBitrate) = 0;
+		virtual RTPSink* createNewRTPSink(Groupsock* rtpGroupsock,
+						unsigned char rtpPayloadTypeIfDynamic,
+						FramedSource* inputSource) = 0;
+		  virtual void startStream(unsigned clientSessionId, void* streamToken,
+					   TaskFunc* rtcpRRHandler,
+					   void* rtcpRRHandlerClientData,
+					   unsigned short& rtpSeqNum,
+								   unsigned& rtpTimestamp,
+					   ServerRequestAlternativeByteHandler* serverRequestAlternativeByteHandler,
+								   void* serverRequestAlternativeByteHandlerClientData)
+		  {
+			  OnDemandServerMediaSubsession::startStream(clientSessionId,
+					  streamToken,
+					  rtcpRRHandler,
+					  rtcpRRHandlerClientData,
+					  rtpSeqNum,
+					  rtpTimestamp,
+					  serverRequestAlternativeByteHandler,
+					  serverRequestAlternativeByteHandlerClientData);
+		  }
+		virtual void pauseStream(unsigned clientSessionId, void *streamToken)
+		{
+			/*
+				we have nothing to do. because the sink has no request source's data.
+			*/
+
+			OnDemandServerMediaSubsession::pauseStream(clientSessionId, streamToken);
+		}
+		virtual void seekStreamSource(FramedSource* inputSource, double& seekNPT, double streamDuration, u_int64_t& numBytes)
+		{
+
+
+				/*
+					OnDemandServerMediaSubsession has no imple
+				*/
+			OnDemandServerMediaSubsession ::seekStreamSource (inputSource, seekNPT, streamDuration, numBytes);
+			mediafiltered_source *_filtersource = dynamic_cast<mediafiltered_source *>(inputSource);
+			if(_filtersource)/*reference for client id*/
+			{
+				_filtersource->seekFrame(seekNPT, streamDuration, numBytes);
+			}
+
 		}
 
-	}
-
-  virtual void seekStreamSource(FramedSource* inputSource, char*& absStart, char*& absEnd)
-	{
-
-			/*
-				OnDemandServerMediaSubsession has no imple
-			*/
-		OnDemandServerMediaSubsession::seekStreamSource(inputSource, absStart, absEnd);
-		mediafiltered_source *_filtersource = dynamic_cast<mediafiltered_source *>(inputSource);
-		if(_filtersource)/*reference for client id*/
+	  virtual void seekStreamSource(FramedSource* inputSource, char*& absStart, char*& absEnd)
 		{
-			_filtersource->seekFrame(absStart, absEnd);
+
+				/*
+					OnDemandServerMediaSubsession has no imple
+				*/
+			OnDemandServerMediaSubsession::seekStreamSource(inputSource, absStart, absEnd);
+			mediafiltered_source *_filtersource = dynamic_cast<mediafiltered_source *>(inputSource);
+			if(_filtersource)/*reference for client id*/
+			{
+				_filtersource->seekFrame(absStart, absEnd);
+			}
 		}
-	}
 
-  virtual void setStreamSourceScale(FramedSource* inputSource, float scale)
-	{
-	OnDemandServerMediaSubsession::setStreamSourceScale(inputSource, scale);
-	}
-  virtual void setStreamSourceDuration(FramedSource* inputSource, double streamDuration, u_int64_t& numBytes)
-	{
-		OnDemandServerMediaSubsession::setStreamSourceDuration(inputSource, streamDuration, numBytes);
-	}
-};
-/*--------------------------------------------------------------------------------
- server media subsession for h264 frame
- --------------------------------------------------------------------------------*/
-class livemediapp_h264_servermediasubsession : public livemediapp_servermediasubession
-{
-public:
-	livemediapp_h264_servermediasubsession(livemediapp_serversession &serversession, Boolean breuse) :
-		livemediapp_servermediasubession(serversession, AVMEDIA_TYPE_VIDEO, breuse){}
-	virtual ~livemediapp_h264_servermediasubsession(){}
-	virtual void closeStreamSource(FramedSource *inputSource)
-	{  
+	  virtual void setStreamSourceScale(FramedSource* inputSource, float scale)
+		{
+		OnDemandServerMediaSubsession::setStreamSourceScale(inputSource, scale);
+		}
+	  virtual void setStreamSourceDuration(FramedSource* inputSource, double streamDuration, u_int64_t& numBytes)
+		{
+			OnDemandServerMediaSubsession::setStreamSourceDuration(inputSource, streamDuration, numBytes);
+		}
+	};
+		/*--------------------------------------------------------------------------------
+		 server media subsession for h264 frame
+		 --------------------------------------------------------------------------------*/
+		class livemediapp_h264_servermediasubsession : public livemediapp_servermediasubession
+		{
+		public:
+			livemediapp_h264_servermediasubsession(livemediapp_serversession &serversession, Boolean breuse) :
+				livemediapp_servermediasubession(serversession, AVMEDIA_TYPE_VIDEO, breuse){}
+			virtual ~livemediapp_h264_servermediasubsession(){}
+			virtual void closeStreamSource(FramedSource *inputSource)
+			{
 
-		H264VideoStreamFramer *source = (H264VideoStreamFramer *)inputSource;
-		mediafiltered_source *filter = (mediafiltered_source*)source->inputSource();
-		unsigned clientsessionid = filter->clientid();
-		/*
-			close source for delete serversession's source dependency
-		*/
-		Medium::close(source);
-
-
-		if(clientsessionid) _serversession.closeStreamSource(clientsessionid);
-	}
-	virtual FramedSource* createNewStreamSource(unsigned clientSessionId,
-						      unsigned& estBitrate)
-	{
-	/*
-		ondemand create dummy sink for sdp using 'clinetSessionId = 0'
-		so we do not create last source for speed with memory 
-	*/
-		if(clientSessionId) _serversession.createNewStreamSource(clientSessionId);
-		return H264VideoStreamFramer::createNew(envir(),new mediafiltered_source(_serversession,
-			AVMEDIA_TYPE_VIDEO, 
-			clientSessionId), False);
-	}
-	virtual RTPSink* createNewRTPSink(Groupsock* rtpGroupsock,
-					unsigned char rtpPayloadTypeIfDynamic,
-					FramedSource* inputSource)
-	{
-		 return H264VideoRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic);
-	}
-};
-/*--------------------------------------------------------------------------------
- server media subsession for aac (adts)format
- --------------------------------------------------------------------------------*/
-class livemediapp_adts_audio_servermediasubsession : public livemediapp_servermediasubession
-{
-	int profile;
-	int frequency;
-	int channel;
-public:
-	livemediapp_adts_audio_servermediasubsession(livemediapp_serversession &serversession, const AVCodecContext *codecinfo, Boolean breuse) :
-				livemediapp_servermediasubession(serversession, AVMEDIA_TYPE_AUDIO, breuse),
-	 profile(codecinfo->profile),
-	 frequency(codecinfo->sample_rate),
-	 channel(codecinfo->channels) { 	}
-	virtual ~livemediapp_adts_audio_servermediasubsession(){}
-	virtual void closeStreamSource(FramedSource *inputSource)
-	{  
-		unsigned clientid = 0;
-		mediafiltered_source *filter = (mediafiltered_source*)inputSource;
-		clientid = filter->clientid();
-		/*
-			close source for delete serversession's source dependency
-		*/
-		Medium::close(filter);
-
-		if(clientid)_serversession.closeStreamSource(clientid);
-	}
-	virtual FramedSource* createNewStreamSource(unsigned clientSessionId,
-						      unsigned& estBitrate)
-	{
-		/*
-		ondemand create dummy sink for sdp using 'clinetSessionId = 0'
-		so we do not create last source for speed with memory 
-	*/
-	
-	 if(clientSessionId) _serversession.createNewStreamSource(clientSessionId);
-		return new mediafiltered_source(_serversession, 
-			AVMEDIA_TYPE_AUDIO, 
-			clientSessionId);
-	}
-	virtual RTPSink* createNewRTPSink(Groupsock* rtpGroupsock,
-					unsigned char rtpPayloadTypeIfDynamic,
-					FramedSource* inputSource)
-	{
-		  // Construct the 'AudioSpecificConfig', and from it, the corresponding ASCII string:
-		int frequencyindex = 0;
-		if(96000 == frequency) frequencyindex = 0;
-		else if(88200 == frequency) frequencyindex = 1;
-		else if(64000 == frequency) frequencyindex = 2;
-		else if(48000 == frequency) frequencyindex = 3;
-		else if(44100 == frequency) frequencyindex = 4;
-		else if(32000 == frequency) frequencyindex = 5;
-		else if(24000 == frequency) frequencyindex = 6;
-		else if(22050 == frequency) frequencyindex = 7;
-		else if(16000 == frequency) frequencyindex = 8;
-		else if(12000 == frequency) frequencyindex = 9;
-		else if(11025 == frequency) frequencyindex = 10;
-		else if(8000 == frequency) frequencyindex = 11;
-		else if(7350 == frequency) frequencyindex = 12;
-		else if(0 == frequency) frequencyindex = 13;
-		else if(0 == frequency) frequencyindex = 14;
-		else if(0 == frequency) frequencyindex = 15;
-
-		 unsigned char audioSpecificConfig[2];
-		 char fConfigStr[5];
-		 u_int8_t const audioObjectType = profile + 1;
-		 audioSpecificConfig[0] = (audioObjectType<<3) | (frequencyindex>>1);
-		 audioSpecificConfig[1] = (frequencyindex<<7) | (channel<<3);
-		 sprintf(fConfigStr, "%02X%02x", audioSpecificConfig[0], audioSpecificConfig[1]);
-
-		return MPEG4GenericRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic, frequency, "audio", "AAC-hbr", fConfigStr, channel);
-	}
-};
+				H264VideoStreamFramer *source = (H264VideoStreamFramer *)inputSource;
+				mediafiltered_source *filter = (mediafiltered_source*)source->inputSource();
+				unsigned clientsessionid = filter->clientid();
+				/*
+					close source for delete serversession's source dependency
+				*/
+				Medium::close(source);
 
 
+				if(clientsessionid) _serversession.closeStreamSource(clientsessionid);
+			}
+			virtual FramedSource* createNewStreamSource(unsigned clientSessionId,
+									  unsigned& estBitrate)
+			{
+			/*
+				ondemand create dummy sink for sdp using 'clinetSessionId = 0'
+				so we do not create last source for speed with memory
+			*/
+				if(clientSessionId) _serversession.createNewStreamSource(clientSessionId);
+				return H264VideoStreamFramer::createNew(envir(),new mediafiltered_source(_serversession,
+					AVMEDIA_TYPE_VIDEO,
+					clientSessionId), False);
+			}
+			virtual RTPSink* createNewRTPSink(Groupsock* rtpGroupsock,
+							unsigned char rtpPayloadTypeIfDynamic,
+							FramedSource* inputSource)
+			{
+				 return H264VideoRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic);
+			}
+		};
+		/*--------------------------------------------------------------------------------
+		 server media subsession for aac (adts)format
+		 --------------------------------------------------------------------------------*/
+		class livemediapp_adts_audio_servermediasubsession : public livemediapp_servermediasubession
+		{
+			int profile;
+			int frequency;
+			int channel;
+		public:
+			livemediapp_adts_audio_servermediasubsession(livemediapp_serversession &serversession, const AVCodecContext *codecinfo, Boolean breuse) :
+						livemediapp_servermediasubession(serversession, AVMEDIA_TYPE_AUDIO, breuse),
+			 profile(codecinfo->profile),
+			 frequency(codecinfo->sample_rate),
+			 channel(codecinfo->channels) { 	}
+			virtual ~livemediapp_adts_audio_servermediasubsession(){}
+			virtual void closeStreamSource(FramedSource *inputSource)
+			{
+				unsigned clientid = 0;
+				mediafiltered_source *filter = (mediafiltered_source*)inputSource;
+				clientid = filter->clientid();
+				/*
+					close source for delete serversession's source dependency
+				*/
+				Medium::close(filter);
 
+				if(clientid)_serversession.closeStreamSource(clientid);
+			}
+			virtual FramedSource* createNewStreamSource(unsigned clientSessionId,
+									  unsigned& estBitrate)
+			{
+				/*
+				ondemand create dummy sink for sdp using 'clinetSessionId = 0'
+				so we do not create last source for speed with memory
+			*/
+
+			 if(clientSessionId) _serversession.createNewStreamSource(clientSessionId);
+				return new mediafiltered_source(_serversession,
+					AVMEDIA_TYPE_AUDIO,
+					clientSessionId);
+			}
+			virtual RTPSink* createNewRTPSink(Groupsock* rtpGroupsock,
+							unsigned char rtpPayloadTypeIfDynamic,
+							FramedSource* inputSource)
+			{
+				  // Construct the 'AudioSpecificConfig', and from it, the corresponding ASCII string:
+				int frequencyindex = 0;
+				if(96000 == frequency) frequencyindex = 0;
+				else if(88200 == frequency) frequencyindex = 1;
+				else if(64000 == frequency) frequencyindex = 2;
+				else if(48000 == frequency) frequencyindex = 3;
+				else if(44100 == frequency) frequencyindex = 4;
+				else if(32000 == frequency) frequencyindex = 5;
+				else if(24000 == frequency) frequencyindex = 6;
+				else if(22050 == frequency) frequencyindex = 7;
+				else if(16000 == frequency) frequencyindex = 8;
+				else if(12000 == frequency) frequencyindex = 9;
+				else if(11025 == frequency) frequencyindex = 10;
+				else if(8000 == frequency) frequencyindex = 11;
+				else if(7350 == frequency) frequencyindex = 12;
+				else if(0 == frequency) frequencyindex = 13;
+				else if(0 == frequency) frequencyindex = 14;
+				else if(0 == frequency) frequencyindex = 15;
+
+				 unsigned char audioSpecificConfig[2];
+				 char fConfigStr[5];
+				 u_int8_t const audioObjectType = profile + 1;
+				 audioSpecificConfig[0] = (audioObjectType<<3) | (frequencyindex>>1);
+				 audioSpecificConfig[1] = (frequencyindex<<7) | (channel<<3);
+				 sprintf(fConfigStr, "%02X%02x", audioSpecificConfig[0], audioSpecificConfig[1]);
+
+				return MPEG4GenericRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic, frequency, "audio", "AAC-hbr", fConfigStr, channel);
+			}
+		};
 
 	virtual void closeStreamSource(unsigned clientSessionId)
 	{  
