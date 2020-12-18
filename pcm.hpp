@@ -8,7 +8,7 @@ class pcm :
 private:
 	std::tuple <int,/*channel*/
 	int,/*samplingrate*/
-	int,/*samplesize*/
+	int,/*number of sample in single channel*/
 	enum AVSampleFormat/*sample format*/
 	> _val;
 public:
@@ -128,6 +128,12 @@ public:
 	{ return std::get<2>(_val); }
 	enum AVSampleFormat format() const
 	{ return std::get<3>(_val); }
+	bool operator == (const pcm &o)
+	{
+		return channel() == o.channel() &&
+				samplingrate() == o.samplingrate() &&
+				format() == o.format();
+	}
     virtual operator bool ()const
 	{
 		/*

@@ -19,7 +19,7 @@ private:
 			int,
 			enum AVSampleFormat>(raw()->channels,
 					raw()->sample_rate,
-					0,/*TODO calc samplesize*/
+					raw()->nb_samples,
 					(enum AVSampleFormat)raw()->format));
 	}
 public:

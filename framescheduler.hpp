@@ -146,7 +146,7 @@ public:
 				enum AVSampleFormat>
 				(std::get<0>(_pcmframe.first.audio_output_attr),
 						std::get<1>(_pcmframe.first.audio_output_attr),
-						return_size / av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(_pcmframe.first.audio_output_attr)),
+						return_size / (av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(_pcmframe.first.audio_output_attr)) * std::get<0>(_pcmframe.first.audio_output_attr) ),
 				(enum AVSampleFormat)std::get<2>(_pcmframe.first.audio_output_attr)));
 		/*
 		 	 	 realign remian data
