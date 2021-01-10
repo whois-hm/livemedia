@@ -240,7 +240,7 @@ protected:
 		}
 		else if(_masterclock == AVMEDIA_TYPE_AUDIO)
 		{
-			return _audio_last_pts - (Tclass::_pcmframe.first._index *
+			return _audio_last_pts - (Tclass::_pcmframe.first._index /
 					std::get<0>(Tclass::_pcmframe.first.audio_output_attr))/_audio_bps;
 		}
 		return 0.0;
@@ -316,7 +316,7 @@ protected:
 	{
 
 		_audio_last_pts = rf() /*input pts */ +
-				(size_from_array)/*input frame size */ /
+				((size_from_array)/*input frame size */ / std::get<0>(Tclass::_pcmframe.first.audio_output_attr)) /
 				(double)_audio_bps;
 	}
 	virtual void usingframe( _type_pixelframe &rf) = 0;
@@ -352,9 +352,8 @@ public:
 	    _audiodiff_cum = 0.0;
 	    _audiodiff_avgcoef = 0.0;
 		_audio_last_pts = 0.0;
-		/*channel * samplingrate * sample number*/
-		_audio_bps = std::get<0>(Tclass::_pcmframe.first.audio_output_attr) *
-				std::get<1>(Tclass::_pcmframe.first.audio_output_attr) *
+		/*samplingrate * sample number*/
+		_audio_bps = std::get<1>(Tclass::_pcmframe.first.audio_output_attr) *
 				av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr));
 		Tclass::data_clear();
 	}
@@ -402,7 +401,7 @@ public:
 		do
 		{
 			double audio_current_clock =
-					_audio_last_pts - (Tclass::_pcmframe.first._index * std::get<0>(Tclass::_pcmframe.first.audio_output_attr))/
+					_audio_last_pts - (Tclass::_pcmframe.first._index / std::get<0>(Tclass::_pcmframe.first.audio_output_attr))/
 					_audio_bps;
 
 			pf.first = (audio_current_clock);
@@ -438,7 +437,7 @@ public:
 			 	 	 Remember that audio_length * (sample_rate * # of channels * 2) is the number of samples in audio_length seconds of audio.
 			 	 	 Therefore, number of samples we want is going to be the number of samples we already have plus or minus the number of samples that correspond to the amount of time the audio has drifted
 			 */
-		  manipulate_size = dump.first.take<unsigned>() + (int) (diff * _audio_bps);
+		  manipulate_size = dump.first.take<unsigned>() + (int) ((diff * _audio_bps) * std::get<0>(Tclass::_pcmframe.first.audio_output_attr));
 		  min_size = dump.first.take<unsigned>() * ((100 - SAMPLE_CORRECTION_PERCENT_MAX) / 100);
 		  max_size = dump.first.take<unsigned>() * ((100 + SAMPLE_CORRECTION_PERCENT_MAX) / 100);
 		  if(manipulate_size < min_size)
@@ -473,16 +472,17 @@ public:
 
 			int append_size = std::abs(manipulate_size);
 			int appended_len = dump.first.take<unsigned>() + append_size;
-			int bytesamplesize = av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr));
+			int bytesamplesize = av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr)) * std::get<0>(Tclass::_pcmframe.first.audio_output_attr);
 			const uint8_t * lastsample = dump.first.take<uint8_t *>() + (dump.first.take<unsigned>() - bytesamplesize);
 
 
 			uint8_t new_pcm_buffer[append_size];
 			uint8_t *ptr = new_pcm_buffer;
-
-			while(append_size--)
+			int next = 0;
+			while(next < append_size)
 			{
-				memcpy(ptr + append_size, lastsample, bytesamplesize);
+				memcpy(ptr + next, lastsample, bytesamplesize);
+				next += bytesamplesize;
 			}
 			dump.first += std::make_pair(ptr, append_size);
 		}
@@ -492,7 +492,8 @@ public:
 				enum AVSampleFormat>
 				(std::get<0>(Tclass::_pcmframe.first.audio_output_attr),
 						std::get<1>(Tclass::_pcmframe.first.audio_output_attr),
-						dump.first.take<unsigned>() / av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr)),
+						dump.first.take<unsigned>() / (av_get_bytes_per_sample((enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr)) *
+								std::get<0>(Tclass::_pcmframe.first.audio_output_attr)),
 				(enum AVSampleFormat)std::get<2>(Tclass::_pcmframe.first.audio_output_attr)));
 
 		return dump;

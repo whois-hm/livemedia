@@ -10,7 +10,6 @@ public:
 	avframe_class() :
 		_frame(av_frame_alloc())
 	{
-
 	}
 	avframe_class(const  AVFrame &frm) :
 		_frame(av_frame_alloc())
@@ -87,7 +86,8 @@ private:
 
 	}
 protected:
-	avframe_class_type(){}
+	avframe_class_type() :
+	avframe_class(){}
 	avframe_class_type(const  AVFrame &frm) :
 		avframe_class(frm){}
 	avframe_class_type(const  avframe_class_type &_class) :

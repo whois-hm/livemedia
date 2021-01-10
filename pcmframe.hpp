@@ -6,7 +6,7 @@ class pcmframe :
 		public avframe_class_type
 		<pcm>
 {
-private:
+protected:
 	void throw_if_not_audio()
 	{
 		DECLARE_THROW(type() != AVMEDIA_TYPE_AUDIO,
@@ -25,19 +25,41 @@ private:
 public:
 	pcmframe() = delete;
 	pcmframe(const  AVFrame &frm) :
-		avframe_class_type(frm)
+		avframe_class_type<pcm>(frm)
 	{
 		throw_if_not_audio();
 	}
 	pcmframe(const pcmframe &_class) :
-		avframe_class_type(dynamic_cast<const avframe_class_type &>(_class))
+		avframe_class_type<pcm>(dynamic_cast<const avframe_class_type &>(_class))
 	{
 		throw_if_not_audio();
+	}
+	pcmframe(int channel,
+			int samplingrate,
+			int samplesize,
+			enum AVSampleFormat fmt,
+			uint8_t *data,
+			int datasize) :
+				avframe_class_type<pcm>()
+	{
+		raw()->channels = channel;
+		raw()->sample_rate = samplingrate;
+		raw()->format = (int)fmt;
+		raw()->nb_samples = samplesize;
+		raw()->channel_layout = av_get_default_channel_layout(raw()->channels);
+
+		av_samples_alloc_array_and_samples(&raw()->extended_data, raw()->linesize, channel,
+		                     samplesize, fmt, 1);
+		av_samples_copy(raw()->extended_data, (uint8_t * const*)&data, 0,
+		                    0, samplesize, channel,
+		                    fmt);
+
 	}
 	virtual ~pcmframe()
 	{
 
 	}
+
 	pcmframe &operator = (const  AVFrame &frm)
 	{
 		avframe_class::operator =(frm);
@@ -47,7 +69,7 @@ public:
 	pcmframe &operator = (const pcmframe &_class)
 	{
 		avframe_class_type::operator =
-				(dynamic_cast<const avframe_class_type &>(_class));
+				(dynamic_cast<const avframe_class_type <pcm>&>(_class));
 		return *this;
 	}
 	virtual int len()
@@ -62,11 +84,12 @@ public:
 		 	 	      * For packed audio, there is just one data pointer, and linesize[0]
 		 	 	      * contains the total size of the buffer for all channels.
 		 */
-			return av_samples_get_buffer_size(NULL,
-						 raw()->channels,
-						 raw()->nb_samples,
-				         (enum AVSampleFormat)raw()->format,
-						 1);
+		int len = av_samples_get_buffer_size(NULL,
+				 raw()->channels,
+				 raw()->nb_samples,
+		         (enum AVSampleFormat)raw()->format,
+				 1);
+			return len;
 	}
 	virtual void data_copy(uint8_t *ptr, int length)
 	{
@@ -85,8 +108,9 @@ public:
 
 		if(length > 0)
 		{
+
 			pcm d(length);
-			memcpy(d.take<raw_media_data::type_ptr>(), raw()->extended_data[0], length);
+			memcpy(d.take<raw_media_data::type_ptr>(), raw()->data[0], length);
 			return d;
 		}
 		return pcm();
@@ -101,11 +125,44 @@ protected:
 	AVRational _rational;
 
 public:
+	pcmframe_presentationtime &operator =
+			(const pcmframe_presentationtime &_class)
+	{
+		pcmframe::operator =
+						(dynamic_cast<const pcmframe &>(_class));
+		_pts = _class._pts;
+				return *this;
+	}
+	virtual void field_attr_value(pcm &t)
+	{
+		pcmframe::field_attr_value(t);
+
+		t = _pts;
+	}
+	pcmframe_presentationtime (const pcmframe_presentationtime &frame) :
+		pcmframe(dynamic_cast<const pcmframe &>(frame)),
+		_pts(frame._pts)
+	{
+	}
 	pcmframe_presentationtime(const pcmframe &f,
 			const AVRational rational) :
 				pcmframe(f),
 				_pts(0.0),
 				_rational(rational){}
+	pcmframe_presentationtime(int channel,
+			int samplingrate,
+			int samplesize,
+			enum AVSampleFormat fmt,
+			uint8_t *data,
+			int datasize,
+			double pts = 0.0) :
+				pcmframe(channel,
+						samplingrate,
+						samplesize,
+						fmt,
+						data,
+						datasize), _pts(pts)
+	{_rational.den = 0; _rational.num = 0; }
 	double operator()()
 	{
 		if(_pts != 0.0)

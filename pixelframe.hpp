@@ -70,6 +70,31 @@ public:
 				height,
 				1);
 	}
+	pixelframe(unsigned width,
+			unsigned height,
+			enum AVPixelFormat fmt):
+				avframe_class_type<pixel>()
+	{
+			DECLARE_THROW(width <= 0, "pixelframe invalid width");
+			DECLARE_THROW(height <= 0, "pixelframe invalid height");
+			DECLARE_THROW(fmt < 0, "pixelframe invalid format");
+
+
+			raw()->width = width;
+			raw()->height = height;
+			raw()->format = fmt;
+			av_frame_get_buffer(raw(), 0);
+
+			uint8_t black[len()];
+			memset(black, 0, len());
+			av_image_fill_arrays(raw()->data,
+					raw()->linesize,
+					black,
+					fmt,
+					width,
+					height,
+					1);
+	}
 
 	pixelframe(const  AVFrame &frm) :
 		avframe_class_type(frm)
@@ -167,10 +192,25 @@ protected:
 	double _pts;
 	AVRational _rational;
 public:
+	pixelframe_presentationtime(const pixelframe_presentationtime &f):pixelframe(dynamic_cast<const pixelframe &>(f)) {
+		_pts = f._pts;
+		_rational = f._rational;
+		 }
 	pixelframe_presentationtime(const pixelframe &f,
 			const AVRational rational) : pixelframe(f),
 					_pts(0.0),
 					_rational(rational){}
+	pixelframe_presentationtime (unsigned width,
+		unsigned height,
+		enum AVPixelFormat fmt,
+		void *p, double pts = 0.0) :
+			pixelframe(width, height, fmt, p),
+			_pts(pts) { }
+	pixelframe_presentationtime (unsigned width,
+			unsigned height,
+			enum AVPixelFormat fmt, double pts = 0.0) :
+				pixelframe(width, height, fmt),
+				_pts(pts) { }
 	virtual ~pixelframe_presentationtime(){}
 	double operator()()
 	{

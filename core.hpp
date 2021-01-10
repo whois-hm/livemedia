@@ -51,6 +51,8 @@ extern "C"
 #include "WQ.h"
 
 
+
+#include <dirent.h>
 /*
  	 get stl c++
  */

@@ -279,6 +279,42 @@ private:
 
 
 public:
+	static  void available_containters(const std::string &root, std::list<std::string> &list)
+	{
+		std::string _root = root + std::string("/");
+		DIR *dir = nullptr;
+		struct dirent *dir_entry = nullptr;
+
+		dir = opendir(_root.c_str());
+		if(!dir)
+		{
+			return;
+		}
+		while((dir_entry = readdir(dir)) != nullptr)
+		{
+			struct stat buf;
+			lstat((_root + std::string(dir_entry->d_name)).c_str(), &buf);
+			if(S_ISDIR(buf.st_mode))
+			{
+				if(std::string(dir_entry->d_name) == "." ||
+						std::string(dir_entry->d_name) == "..")
+				{
+					continue;
+				}
+				available_containters(_root + std::string(dir_entry->d_name), list);
+			}
+			else
+			{
+				if(contain_string(dir_entry->d_name, ".mp4"))
+				{
+					list.push_back(_root + std::string(dir_entry->d_name));
+				}
+			}
+		}
+		closedir(dir);
+	}
+
+
 	local_playback(const avattr &attr, char const *name) :
 		playback_inst(attr),
 		_mediacontainer(name),

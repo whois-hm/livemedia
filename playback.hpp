@@ -91,7 +91,7 @@ public:
 	bool has(avattr::avattr_type_string &&key)
 	{return _inst->has(static_cast<avattr::avattr_type_string &&>(key));}
 	void play(){_inst->play();}
-	bool isplaying(){_inst->isplaying();}
+	bool isplaying(){return _inst->isplaying();}
 	enum AVMediaType get_master_clock(){return _inst->get_master_clock();}
     duration_div duration(){return _inst->duration();}
     void resolution(int w, int h)

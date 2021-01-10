@@ -2,8 +2,6 @@
 #include "tslib.h"
 
 
-
-
 class touch
 {
 private:

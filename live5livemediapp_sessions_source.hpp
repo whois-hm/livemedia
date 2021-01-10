@@ -159,21 +159,16 @@ private:
 		DECLARE_THROW(res < 0, "source uvc has broken");
 		if(res > 0)/* res == 0	noframe*/
 		{
-			_uvc->get_videoframe([&](pixelframe &pix)->void {
-					(*_filter) << pix;/*filtering*/
-					_enc->encoding(pix,[&](avframe_class &frm,
-							avpacket_class &pkt,
-							void * )->void{
-					{
-						bank_in(AVMEDIA_TYPE_VIDEO, pkt.raw()->data, pkt.raw()->size);
-						readsize = bank_drain(type, to, size);
-						gettimeofday(presentationtime, nullptr);
-					}
+			pixelframe_presentationtime pix= _uvc->get_videoframe();
+			(*_filter) << pix;
+			_enc->encoding(pix,[&](avframe_class &frm,
+										avpacket_class &pkt,
+										void * )->void{
+					bank_in(AVMEDIA_TYPE_VIDEO, pkt.raw()->data, pkt.raw()->size);
+					readsize = bank_drain(type, to, size);
+					gettimeofday(presentationtime, nullptr);
 				});
-			});
 		}
-
-
 		return readsize;
 	}
 	virtual void doStopGettingFrames(enum AVMediaType type)

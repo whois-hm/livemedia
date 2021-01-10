@@ -4,185 +4,206 @@ class uvc_playback :
 		public playback_inst
 {
 
-
-	struct recording
+	struct avscheduler : public
+	avframescheduler<pixelframe_presentationtime,
+		pcmframe_presentationtime>
 	{
-		friend class uvc_playback;
-		enum event { open, record, close, exit, };
-		struct par
-		{
-			enum event e;
-			union
-			{
-				struct {char const *file;
-				int width;
-				int height;
-				enum AVPixelFormat fmt;
-				int fps;
-				int bitrate;
-				int gop;
-				int bframe;
-				enum AVCodecID cid;}open;
-				struct { pixelframe *pixel; }record;
-				struct { }close;
-				struct { }exit;
-			};
-		};
-		mediacontainer_record *_rec;
-		avattr _attr;
-		recording() : _rec(nullptr){}
-		~recording(){fn_close(nullptr);}
-		void fn_open(recording::par *p)
-		{
-			fn_close(nullptr);
-			avattr attr;
-			attr.set(avattr::frame_video, avattr::frame_video, 0, 0.0);
-			attr.set(avattr::width, avattr::width, p->open.width, 0.0);
-			attr.set(avattr::height, avattr::height, p->open.height, 0.0);
-			attr.set(avattr::pixel_format, avattr::pixel_format, (int)p->open.fmt, 0.0);
-			attr.set(avattr::fps, avattr::fps, p->open.fps, 0.0);
-			attr.set(avattr::bitrate, avattr::bitrate, p->open.bitrate, 0.0);
-			attr.set(avattr::gop, avattr::gop, p->open.gop, 0.0);
-			attr.set(avattr::max_bframe, avattr::max_bframe, p->open.bframe, 0.0);
-			attr.set(avattr::video_encoderid, avattr::video_encoderid, (int)p->open.cid, 0.0);
-			_attr = attr;
-			_rec = new mediacontainer_record(_attr,
-					avattr(),/*no audio source*/
-					p->open.file);
-		}
-		void fn_record(recording::par *p)
-		{
-			if(_rec)
-			{
-				{
-					swxcontext_class (*p->record.pixel, _attr);
-				}
+	public:
+		avscheduler(const avattr &attr) :
+			avframescheduler<pixelframe_presentationtime,
+					pcmframe_presentationtime>(attr)
+					{
 
-				_rec->recording(*p->record.pixel);
-			}
-
-			delete p->record.pixel;
-		}
-		void fn_close(recording::par *p)
-		{
-			 if(_rec)delete _rec;
-			 _rec = nullptr;
-		}
-
-		bool operator()(_dword r, void *par, _dword size, _dword *qtime)
-		{
-			if(r != WQOK)
-			{
-				return false;
-			}
-			recording::par *args = (recording::par *)par;
-			if(args->e == open) { fn_open(args);return true;}
-			else if(args->e == record) { fn_record(args); return true; }
-			else if(args->e == close) { fn_close(args); return true; }
-			else if(args->e == exit) { fn_close(nullptr); return false; }
-			return false;
-		}
+					}
+		virtual void usingframe( pixelframe_presentationtime &rf){}
+			virtual void usingframe( pcmframe_presentationtime &rf){}
 	};
-	class pixelframe_filter :
-			public filter<pixelframe,
-			uvc_playback>
-	{
-		friend class uvc_playback;
-		pixelframe_filter(uvc_playback *p) : filter<pixelframe,
-				uvc_playback>(p){}
-		virtual void operator >> (pixelframe &pixel)
-		{
-			recording::par par;
-			par.e = recording::record;
-			par.record.pixel = new pixelframe(pixel);
-			ptr()->_recthread.sendto(&par, sizeof(par), INFINITE);
-		}
-	};
-private:
+
 
 	uvc *_uvc;
-	wthread<recording> _recthread;
-	pixelframe_filter _pixelfilter;
-	std::mutex _lock;
-
-
-
+	soundcardcapture *_soundcard;
+	std::thread *_vth;
+	std::thread *_ath;
+	bool _b;
+	bool _p;
+	avscheduler _scheduler;
+	std::mutex _vlock;
+	std::mutex _alock;
 public:
+	static  void available_devices(std::list<std::string> &list)
+	{
+		std::string root = "/dev";
+		std::string _root = root + std::string("/");
+		DIR *dir = nullptr;
+		struct dirent *dir_entry = nullptr;
+
+		dir = opendir(_root.c_str());
+		if(!dir)
+		{
+			return;
+		}
+		while((dir_entry = readdir(dir)) != nullptr)
+		{
+			struct stat buf;
+			lstat((_root + std::string(dir_entry->d_name)).c_str(), &buf);
+			if(S_ISDIR(buf.st_mode))
+			{
+				continue;
+			}
+			else
+			{
+				if(contain_string(dir_entry->d_name, "video"))
+				{
+					list.push_back(_root + std::string(dir_entry->d_name));
+				}
+			}
+		}
+		closedir(dir);
+	}
 	uvc_playback(const avattr &attr, char const *name) :
 		playback_inst(attr),
 		_uvc(nullptr),
-		_recthread(wthread<recording>(10, sizeof(recording::par), "uvc rec thread")),
-		_pixelfilter(pixelframe_filter(this))
+		_soundcard(nullptr),
+		_vth(nullptr),
+		_ath(nullptr),
+		_b(true),
+		_p(true),
+		_scheduler(attr)
 	{
-		DECLARE_THROW(attr.notfound(avattr::frame_video), "uvc playback can't found video frame");
-		_recthread.start(INFINITE);
-		_uvc = new uvc(name);
+		DECLARE_THROW(attr.notfound(avattr::frame_video) &&
+				attr.notfound(avattr::frame_audio), "uvc playback can't found video or audio frame");
+
+		uvc dump(name);
+		if(!attr.notfound(avattr::frame_audio))
+		{
+			soundcardcapture snd;
+			std::list<soundcard::soundcardid> list = snd.list();
+			for(auto &it : list)
+			{
+				if(contain_string(dump.name(), snd.cardid(it)) ||
+						contain_string(dump.name(), snd.cardname(it)))
+				{
+					audiospec s(attr.get<avattr::avattr_type_int>(avattr::channel),
+							attr.get<avattr::avattr_type_int>(avattr::samplerate),
+							512,
+							(enum AVSampleFormat)attr.get<avattr::avattr_type_int>(avattr::pcm_format));
+					_soundcard = new soundcardcapture();
+					if(_soundcard->open_plughw(it, s) < 0)
+					{
+						delete _soundcard;
+						_soundcard = nullptr;
+					}
+					break;
+				}
+			}
+		}
+		if(!attr.notfound(avattr::frame_video))
+		{
+			_uvc = new uvc(std::move(dump));
+		}
+
 		pause();
+
+		if(_uvc)
+		{
+			_scheduler.set_clock_master(AVMEDIA_TYPE_VIDEO);
+			_vth = new std::thread([&]()->void{
+
+				while(_b)
+				{
+					autolock a(_vlock);
+					if(_uvc->waitframe(-1) > 0)
+					{
+						pixelframe_presentationtime f = _uvc->get_videoframe();
+						swxcontext_class (f, (_attr));
+						_scheduler << (f);
+					}
+				}
+
+			});
+		}
+
+		if(_soundcard)
+		{
+			_scheduler.set_clock_master(AVMEDIA_TYPE_AUDIO);
+			_ath = new std::thread([&]()->void{
+
+				while(_b)
+				{
+					autolock a(_alock);
+					pcmframe_presentationtime f = _soundcard->read();
+					_scheduler << (f);
+				}
+			});
+		}
 	}
 	virtual ~uvc_playback()
 	{
-		recording::par par;
-		par.e = recording::exit;
-		_recthread.sendto(&par, sizeof(par), INFINITE);
-		delete _uvc;
+		resume(true);
+		if(_uvc)
+		{
+			delete _uvc;
+			_uvc = nullptr;
+			_vth->join();
+			delete _vth;
+			_vth = nullptr;
+		}
+		if(_soundcard)
+		{
+			_ath->join();
+			delete _ath;
+			_ath = nullptr;
+			delete _soundcard;
+			_soundcard = nullptr;
+		}
+
 	}
 	enum AVMediaType get_master_clock()
 	{
-		return AVMEDIA_TYPE_VIDEO;
+		return _scheduler.get_clock_master();
 	}
 	void record(char const *file)
 	{
-		/*
-		 	 no condition pause / resume
-		 */
-		{
-			recording::par par;
-			par.e = recording::close;
-			_recthread.sendto_wait(&par, sizeof(par), INFINITE);
-			_pixelfilter.disable();
-		}
-		if(!file)
-		{
-			/*
-			 	 null pointer mean that record stop!
-			 */
-			return;
-		}
-		recording::par par;
-		par.e = recording::open;
-		par.open.bframe = 1;
-		par.open.bitrate = 400000;
-		par.open.cid = AV_CODEC_ID_H264;
-		par.open.file = file;
-		/*
-		 	 hack : force yuyv420p for h264
-		 */
-		//par.open.fmt = _uvc->video_format();
-		par.open.fmt = AV_PIX_FMT_YUV420P;
-		par.open.fps = _uvc->video_fps();
-		par.open.gop = 10;
-		par.open.height = _uvc->video_height();
-		par.open.width = _uvc->video_width();
-		_recthread.sendto_wait(&par, sizeof(par), INFINITE);
-		_pixelfilter.enable();
+
 	}
 	bool pause()
 	{
-		if(_lock.try_lock())
+		if(_p)
 		{
+			return true;
+		}
+		if(_uvc)
+		{
+			_vlock.lock();
 			_uvc->stop();
 		}
+		if(_soundcard)
+		{
+			_alock.lock();
+		}
+		_p = true;
 		return true;
 	}
 
 	bool isplaying()
 	{
-		return true;
+		return _p == false ? true : false;
+
 	}
 
 	bool resume(bool closing = false)
 	{
-		_lock.unlock();
+		if(_uvc)
+		{
+			_vlock.unlock();
+			_uvc->start();
+		}
+		if(_soundcard)
+		{
+			_alock.unlock();
+		}
+		_b = closing;
+		_p = false;
 		return true;
 	}
 	bool seek(double incr)
@@ -195,7 +216,17 @@ public:
 	{
 		if(key == avattr::frame_video)
 		{
-			return true;
+			if(_uvc)
+			{
+				return true;
+			}
+		}
+		if(key == avattr::frame_audio)
+		{
+			if(_soundcard)
+			{
+				return true;
+			}
 		}
 		return false;
 	}
@@ -210,40 +241,31 @@ public:
     }
 	virtual int take(const std::string &title, pixel &output)
 	{
-
-		autolock a(_lock);
-		/*
-		 	 we do not have to pts scheduling.
-		 	 just schedule dependent uvc driver's fps
-		 */
-		int res = _uvc->waitframe(5000);
-		if(res > 0)
+		if(!_uvc)
 		{
-
-			if(_uvc->get_videoframe([&](pixelframe &pix)->void{
-					swxcontext_class (pix, (_attr));
-					_pixelfilter << pix;
-					pix >> output;
-				}) <= 0)
-			{
-				res = -1;
-			}
-
-			if(!output)
-			{
-
-				/*
-				 	 internal error
-				 */
-				res = -1;
-			}
-
+			return -1;
 		}
-		return res;
+		autolock a(_vlock);
+		_scheduler >> (output);
+		if(output)
+		{
+			return 1;
+		}
+		return 0;
 	}
 	virtual int take(const std::string &title, pcm_require &output)
 	{
-		return -1;
+		if(!_soundcard)
+		{
+			return -1;
+		}
+		autolock a(_alock);
+		_scheduler >> (output);
+		if(output.first.take<raw_media_data::type_size>())
+		{
+			return 1;
+		}
+		return 0;
 	}
 };
 

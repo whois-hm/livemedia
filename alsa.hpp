@@ -217,6 +217,7 @@ protected:
 	audiospec _d;
 	unsigned _latency;
 	snd_pcm_stream_t _s;
+	double _lastpts;
 	bool _verbose_write;
 	bool _verbose_read;
 	soundcardctl(snd_pcm_stream_t t) :
@@ -225,11 +226,20 @@ protected:
 		_d(audiospec()),
 		_latency(0),
 		_s(t),
+		_lastpts(0.0),
 		_verbose_write(false),
 		_verbose_read(false){}
 	virtual ~soundcardctl()
 	{
 		close();
+	}
+	int channel()
+	{
+		_d.channel();
+	}
+	int samplingrate()
+	{
+		_d.samplingrate();
 	}
 	int hw_par()
 	{
@@ -539,20 +549,13 @@ public:
 		{
 			return -1;
 		}
-		return _d.take<raw_media_data::type_size>();
+		return _d.samplingrate() *
+				av_get_bytes_per_sample(_d.format())*
+				_d.channel();
 	}
-	pcm read()
+
+	pcmframe_presentationtime read()
 	{
-		if(!isopen())
-		{
-			return pcm();
-		}
-
-		/*
-		 	 we always return fully data
-			capturing pcm base samplingrate .
-		 */
-
 		snd_pcm_format_t fmt = _d.format() == AV_SAMPLE_FMT_U8 ? SND_PCM_FORMAT_U8 :
 				_d.format() == AV_SAMPLE_FMT_S16 ? SND_PCM_FORMAT_S16_LE :
 						SND_PCM_FORMAT_UNKNOWN;
@@ -560,61 +563,83 @@ public:
 		/*alsa using a single channel sample*/
 		unsigned request_samplesize = _d.samplingrate() ;
 		unsigned readi_samplesize_count = 0;
-		pcm res(request_samplesize * av_get_bytes_per_sample(_d.format())* _d.channel());
-		res.set(_d.channel(), _d.samplingrate(), request_samplesize, _d.format());
 
+		unsigned size = request_samplesize * av_get_bytes_per_sample(_d.format())* _d.channel();
+		uint8_t buffer[size];
+		uint8_t *ptr = buffer;
 
-		do
+		snd_pcm_format_set_silence(fmt, ptr, request_samplesize);
+
+		if(isopen())
 		{
+			/*
+			 	 we always return fully data
+				capturing pcm base samplingrate .
+			 */
 
-			if(_verbose_read)printf("alsa read sample: pcm buffer start position = %dbyte, reqeust size = %dbyte request sample = %d\n",
-					(readi_samplesize_count * (av_get_bytes_per_sample(res.format()))),
-					(request_samplesize - readi_samplesize_count) * ( av_get_bytes_per_sample(res.format())),
-					request_samplesize - readi_samplesize_count);
-			snd_pcm_sframes_t readi_samplesize = 0;
-			readi_samplesize = snd_pcm_readi(_h,
-					res.take<raw_media_data::type_ptr>() + (readi_samplesize_count * ( av_get_bytes_per_sample(res.format()))* _d.channel()),
-							request_samplesize - readi_samplesize_count);
-
-			if(_verbose_read)printf("alsa read sample: readi sample size = %d\n", readi_samplesize);
-
-			if(readi_samplesize == -EAGAIN ||
-					(readi_samplesize >= 0 &&
-							readi_samplesize < (request_samplesize - readi_samplesize_count)))
+			do
 			{
-				snd_pcm_wait(_h, _latency);
-				if(_verbose_read)printf("alsa read sample eagain %d\n", readi_samplesize);
-			}
-			else if(readi_samplesize == -EPIPE)
-			{
-				if(!xrun())
+
+				if(_verbose_read)printf("alsa read sample: pcm buffer start position = %dbyte, reqeust size = %dbyte request sample = %d\n",
+						(readi_samplesize_count * (av_get_bytes_per_sample(_d.format()))),
+						(request_samplesize - readi_samplesize_count) * ( av_get_bytes_per_sample(_d.format())),
+						request_samplesize - readi_samplesize_count);
+				snd_pcm_sframes_t readi_samplesize = 0;
+				readi_samplesize = snd_pcm_readi(_h,
+						ptr + (readi_samplesize_count * ( av_get_bytes_per_sample(_d.format()))* _d.channel()),
+								request_samplesize - readi_samplesize_count);
+
+				if(_verbose_read)printf("alsa read sample: readi sample size = %d\n", readi_samplesize);
+
+				if(readi_samplesize == -EAGAIN ||
+						(readi_samplesize >= 0 &&
+								readi_samplesize < (request_samplesize - readi_samplesize_count)))
 				{
-					return pcm();
+					snd_pcm_wait(_h, _latency);
+					if(_verbose_read)printf("alsa read sample eagain %d\n", readi_samplesize);
 				}
-				if(_verbose_read)printf("alsa read sample xrun %d\n", readi_samplesize);
-			}
-			else if(readi_samplesize == -ESTRPIPE)
-			{
-				if(!suspend())
+				else if(readi_samplesize == -EPIPE)
 				{
-					return pcm();
+					if(!xrun())
+					{
+						break;
+					}
+					if(_verbose_read)printf("alsa read sample xrun %d\n", readi_samplesize);
 				}
-				if(_verbose_read)printf("alsa read sample suspend %d\n", readi_samplesize);
-			}
-			else if(readi_samplesize < 0)
-			{
-				return pcm();
-				if(_verbose_read)printf("alsa read sample invalid %d\n", readi_samplesize);
-			}
-			if(readi_samplesize > 0)
-			{
-				readi_samplesize_count += readi_samplesize;
-				if(_verbose_read)printf("alsa readed sample  %d\n", readi_samplesize_count);
-			}
-		}while(readi_samplesize_count < request_samplesize);
+				else if(readi_samplesize == -ESTRPIPE)
+				{
+					if(!suspend())
+					{
+						break;
+					}
+					if(_verbose_read)printf("alsa read sample suspend %d\n", readi_samplesize);
+				}
+				else if(readi_samplesize < 0)
+				{
+					break;
+					if(_verbose_read)printf("alsa read sample invalid %d\n", readi_samplesize);
+				}
+				if(readi_samplesize > 0)
+				{
+					readi_samplesize_count += readi_samplesize;
+					if(_verbose_read)printf("alsa readed sample  %d\n", readi_samplesize_count);
+				}
+			}while(readi_samplesize_count < request_samplesize);
+		}
 
 
-		return res;
+		double thispts = request_samplesize/ _d.samplingrate();
+					_lastpts += thispts;
+		 pcmframe_presentationtime a(_d.channel(),
+				_d.samplingrate(),
+				request_samplesize,
+				_d.format(),
+				buffer,
+				size,
+				_lastpts);
+
+
+		return a;
 	}
 	int write_size()
 	{
@@ -629,7 +654,7 @@ public:
 	{
 		return write(d);
 	}
-	int write( pcm d)
+	int write( pcm &d)
 	{
 		if(!d)
 		{
@@ -779,7 +804,7 @@ public:
 		return soundcard::devicename(id, SND_PCM_STREAM_PLAYBACK);
 	}
 	int read_size() = delete;
-	pcm read() = delete;
+	pcmframe_presentationtime read() = delete;
 };
 
 class soundcardcapture : public soundcardctl
@@ -817,5 +842,6 @@ public:
 	}
 	int write_size() = delete;
 	int write( pcm &d) = delete;
+	int write( pcm &&d) = delete;
 };
 
